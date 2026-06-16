@@ -1,0 +1,58 @@
+# Environment — NEVER commit real secrets
+.env
+*.env
+*.env.local
+*.env.*.local
+
+# Deploy-specific env (do NOT ignore .env.example)
+deploy/litellm/.env
+deploy/litellm/*.env
+
+# Credentials & keys
+*.pem
+*.key
+*.crt
+*.csr
+*.p12
+*.jks
+*.pfx
+
+# Secrets
+*secret*
+*credential*
+*.password
+*.passwd
+
+# Build artifacts
+__pycache__/
+*.py[cod]
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+*.whl
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Local test / temp
+/tmp/
+*.tmp
+.tmp/
+
+# Project-specific: docs & opencode (do NOT commit context/task files)
+docs/
+.opencode/

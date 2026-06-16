@@ -1,0 +1,34 @@
+# =============================================================================
+# LiteLLM Prometheus 監控設定
+# =============================================================================
+# 用途：提供 Prometheus scrape LiteLLM /metrics endpoint
+# 掛載至容器：./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+# =============================================================================
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+alerting:
+  alertmanagers: []
+
+rule_files: []
+
+# ---------------------------------------------------------------------------
+# Scrape Configs
+# ---------------------------------------------------------------------------
+scrape_configs:
+  # --- LiteLLM Proxy ---
+  - job_name: "litellm"
+    static_configs:
+      - targets:
+          - "litellm:4000"
+    metrics_path: "/metrics"
+    scrape_interval: 15s
+    scrape_timeout: 10s
+
+  # --- Prometheus Self-monitoring（可選）---
+  - job_name: "prometheus"
+    static_configs:
+      - targets:
+          - "localhost:9090"

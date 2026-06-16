@@ -1,0 +1,144 @@
+# =============================================================================
+# LiteLLM Docker Compose — Phase B: Docker Compose 正式化雛形
+# =============================================================================
+# 用途：本地 PoC / 內網測試使用
+# 警告：本配置包含 non-production 安全設定，生產部署需：
+#   1. 使用 TLS reverse proxy，不可裸露 HTTP :4000
+#   2. 所有 secrets 從 .env 載入，切勿進 Git
+#   3. 只給客戶端使用 virtual key，勿使用 master key
+# =============================================================================
+
+version: "3.9"
+
+services:
+  # ---------------------------------------------------------------------------
+  # LiteLLM Proxy
+  # ---------------------------------------------------------------------------
+  litellm:
+    image: docker.litellm.ai/berriai/litellm:main-stable
+    container_name: litellm-proxy
+    # Port mapping — 警告：生產環境不可裸露 HTTP，應透過 TLS reverse proxy
+    ports:
+      - "4000:4000"
+    volumes:
+      # 掛載 config.yaml，容器內路徑為 /app/config.yaml
+      - ./config.yaml:/app/config.yaml:ro
+    env_file:
+      - .env
+    environment:
+      # LiteLLM 核心設定（由 .env 載入）
+      - DATABASE_URL=${DATABASE_URL}
+      - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY}
+      - LITELLM_SALT_KEY=${LITELLM_SALT_KEY}
+      # PostgreSQL 連線資訊（litellm 透過 DATABASE_URL 連線，POSTGRES_* 變數留給 postgres service 自己使用）
+      # Redis 連線 — 多 pod 部署強烈建議，單機 PoC 亦啟用以驗證 Redis 整合
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    # 網路設定（可選，預設 bridge）
+    networks:
+      - litellm-network
+
+  # ---------------------------------------------------------------------------
+  # PostgreSQL — LiteLLM 正式環境必備
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:15-alpine
+    container_name: litellm-postgres
+    # ⚠️ Phase 3 前置配置調整（2026-06-16）：移除 host ports 區塊。
+    # DB 僅供 litellm-proxy 透過 Docker 內部 network (postgres:5432) 存取，
+    # 不再對 host 暴露，提升安全性。
+    # 若需 host 連線除錯，可重新加入 ports: ["5433:5432"]。
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      # 持久化 PostgreSQL 資料
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - litellm-network
+
+  # ---------------------------------------------------------------------------
+  # Redis — LiteLLM shared health check cache
+  # ---------------------------------------------------------------------------
+  # 用途：多 pod 共享 health check 結果，避免每個 pod 重複打 provider health
+  # check 消耗 RPM。單機 PoC 亦啟用以驗證 Redis 整合。
+  # 注意：無持久化 volume 掛載，container 重啟後 cache 資料遺失不影響核心功能。
+  #       若需持久化，取消下方 volumes 註解。
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:alpine
+    container_name: litellm-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - litellm-network
+    # volumes:
+    #   - redis_data:/data            # 可選：持久化 Redis cache
+
+  # ---------------------------------------------------------------------------
+  # Prometheus（可選）— 用於 metrics 收集
+  # ---------------------------------------------------------------------------
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: litellm-prometheus
+    volumes:
+      # 掛載 prometheus.yml 設定檔
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      # 可選：持久化 Prometheus 資料
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-lifecycle'
+    ports:
+      - "9091:9090"
+    depends_on:
+      - litellm
+    networks:
+      - litellm-network
+    restart: unless-stopped
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  litellm-network:
+    driver: bridge
+
+# =============================================================================
+# Volumes — 持久化資料
+# =============================================================================
+volumes:
+  postgres_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  # redis_data:                        # 可選：Redis 持久化 cache
