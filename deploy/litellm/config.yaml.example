@@ -96,6 +96,12 @@ general_settings:
   # store_completion: false
   # store_model_plus_response: false
 
+  # === User-level RPM（Phase 1 PoC / 建議正式環境啟用）===
+  # 強制要求 request body 包含 `user` 參數，未帶 user 的請求會被拒絕
+  # 啟用後可搭配 /customer/new + /budget/new 實作 user-level RPM limit
+  # 詳細說明：https://docs.litellm.ai/docs/proxy/user_param
+  enforce_user_param: true
+
   # === CORS（跨域需求時啟用）===
   # cors_origin: "*"
   # cors_allow_credentials: true
