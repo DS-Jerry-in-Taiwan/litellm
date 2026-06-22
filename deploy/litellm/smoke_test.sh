@@ -68,8 +68,13 @@ check_health() {
     local response
     local http_code
 
-    response=$(curl -s -w "\n%{http_code}" \
-        --max-time 10 \
+    # LiteLLM 1.89.0+ 要求 /health 需要認證
+    local curl_args=(-s -w "\n%{http_code}" --max-time 10)
+    if [[ -n "${LITELLM_API_KEY}" ]]; then
+        curl_args+=(-H "Authorization: Bearer ${LITELLM_API_KEY}")
+    fi
+
+    response=$(curl "${curl_args[@]}" \
         "${LITELLM_BASE_URL}/health" \
         -o /tmp/health_body.txt 2>&1) || {
         log_error "Failed to connect to ${LITELLM_BASE_URL}/health"
@@ -236,6 +241,13 @@ main() {
     echo "Chat Test:  ${RUN_CHAT_TEST}"
     echo "Key Test:   ${RUN_KEY_TEST}"
     echo "============================================"
+
+    # ── 如果 LITELLM_API_KEY 還是 placeholder，發出警告 ─────────
+    if [[ "${LITELLM_API_KEY}" == "sk-change-me-replace-before-use" ]]; then
+        log_warn "LITELLM_API_KEY / LITELLM_MASTER_KEY 尚未設定。"
+        log_warn "部分測試（如 /health）可能需要 API key 才能通過。"
+    fi
+    # ─────────────────────────────────────────────────────────────
 
     local failed=0
 

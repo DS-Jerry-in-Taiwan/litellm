@@ -48,7 +48,9 @@ model_list:
 litellm_settings:
   # === Observability — 啟用 Prometheus metrics ===
   # 啟用後可 GET /metrics 供 Prometheus scrape
+  # 注意：LiteLLM 1.89.0 需同時設定 success_callback 才能正確掛載 /metrics
   callbacks: ["prometheus"]
+  success_callback: ["prometheus"]
 
   # === Redis — 多 pod 部署必備，單機 PoC 亦啟用以驗證整合 ===
   # LiteLLM 會將 health check 結果寫入 Redis，各 pod 共用

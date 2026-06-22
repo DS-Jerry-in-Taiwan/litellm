@@ -23,6 +23,11 @@ services:
     volumes:
       # 掛載 config.yaml，容器內路徑為 /app/config.yaml
       - ./config.yaml:/app/config.yaml:ro
+      # 掛載 entrypoint wrapper 與 metrics patch 腳本
+      - ./litellm-entrypoint.sh:/app/litellm-entrypoint.sh:ro
+      - ./patch_metrics.py:/app/patch_metrics.py:ro
+    entrypoint: ["/bin/sh", "/app/litellm-entrypoint.sh"]
+    command: ["--port", "4000"]
     env_file:
       - .env
     environment:
@@ -41,7 +46,7 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
+      test: ["CMD", "python3", "-c", "import urllib.request, sys; sys.exit(0) if urllib.request.urlopen('http://localhost:4000/health/liveliness').status == 200 else sys.exit(1)"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -112,12 +117,14 @@ services:
     volumes:
       # 掛載 prometheus.yml 設定檔
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      # 掛載 wrapper script
+      - ./prometheus-wrapper.sh:/usr/local/bin/prometheus-wrapper.sh:ro
       # 可選：持久化 Prometheus 資料
       - prometheus_data:/prometheus
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--web.enable-lifecycle'
+    entrypoint: ['/bin/sh', '-c']
+    command: '/usr/local/bin/prometheus-wrapper.sh'
+    environment:
+      - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY}
     ports:
       - "9091:9090"
     depends_on:
