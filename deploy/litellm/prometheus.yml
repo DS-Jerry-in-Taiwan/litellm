@@ -20,6 +20,8 @@ rule_files: []
 scrape_configs:
   # --- LiteLLM Proxy ---
   - job_name: "litellm"
+    authorization:
+      credentials: "${LITELLM_MASTER_KEY}"
     static_configs:
       - targets:
           - "litellm:4000"
