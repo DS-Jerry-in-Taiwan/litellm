@@ -8,16 +8,41 @@
 
 ---
 
+## 版本變革
+
+### v20260622 — Metrics 修補與 Prometheus 認證（最新）
+- 修復 LiteLLM 1.89.x `/metrics` 404 問題（`patch_metrics.py` + `litellm-entrypoint.sh` wrapper）
+- 新增 Prometheus 認證支援（`prometheus-wrapper.sh`）
+- 修正 compose.yaml healthcheck 改用 python3 檢查 `/health/liveliness`
+- `smoke_test.sh` 支援 Authorization header
+- 移除 `compose.yaml` 中不存在的 `metrics_patch.py` 掛載
+
+### v20260619 — User RPM 控制
+- 啟用 `enforce_user_param` 實現 user-level RPM 限制
+- 新增 `test_user_rpm.sh` 測試腳本
+- 更新 README 測試指引
+
+### v20260616 — MVP 初始部署
+- LiteLLM Proxy（PostgreSQL + Redis + Prometheus）Docker Compose 部署
+- `config.yaml` 設定檔範本
+- 基礎 `smoke_test.sh` 健康檢查
+
+---
+
 ## 目錄結構
 
 ```
 deploy/litellm/
-├── compose.yaml              # Docker Compose（LiteLLM + PostgreSQL + Redis + 可選 Prometheus）
-├── .env.example              # 環境變數範本（複製為 .env）
+├── compose.yaml               # Docker Compose（LiteLLM + PostgreSQL + Redis + Prometheus）
+├── .env.example               # 環境變數範本（複製為 .env）
 ├── config.yaml.example        # LiteLLM 設定檔範本
-├── config.yaml                # LiteLLM 實際設定（從 example 複製，不進 Git）
+├── config.yaml                # LiteLLM 設定檔（可從 example 複製）
+├── litellm-entrypoint.sh      # Entrypoint wrapper（patch metrics → 啟動 proxy）
+├── patch_metrics.py           # /metrics 路由修補（LiteLLM 1.89.x workaround）
 ├── prometheus.yml             # Prometheus 監控設定
+├── prometheus-wrapper.sh      # Prometheus env 變數替換 wrapper
 ├── smoke_test.sh              # 健康檢查腳本
+├── test_user_rpm.sh           # User-level RPM 測試腳本
 ├── helm/
 │   └── values.yaml.example    # Kubernetes Helm values 範本
 └── README.md                  # 本文件
@@ -128,8 +153,8 @@ curl http://localhost:4000/v1/chat/completions \
 
 | 端點 | 方法 | 用途 | 認證 |
 |------|------|------|------|
-| `/health` | GET | 健康檢查 | 無 |
-| `/metrics` | GET | Prometheus metrics | 無 |
+| `/health` | GET | 健康檢查 | 無（LiteLLM 1.89.0+ 建議帶 key） |
+| `/metrics` | GET | Prometheus metrics | Master key（Prometheus 透過 wrapper 帶入） |
 | `/v1/chat/completions` | POST | OpenAI-compatible API | Virtual key |
 | `/key/generate` | POST | 建立 virtual key | Master key |
 | `/keys` | GET | 列出所有 keys | Master key |
@@ -142,7 +167,7 @@ curl http://localhost:4000/v1/chat/completions \
 | 服務 | Container Name | Image | Host Port | 用途 |
 |------|---------------|-------|-----------|------|
 | LiteLLM Proxy | `litellm-proxy` | `docker.litellm.ai/berriai/litellm:main-stable` | `4000` | OpenAI-compatible API proxy |
-| PostgreSQL | `litellm-postgres` | `postgres:15-alpine` | `5433` | 資料庫（virtual keys、spend logs） |
+| PostgreSQL | `litellm-postgres` | `postgres:15-alpine` | —（僅內部 network） | 資料庫（virtual keys、spend logs） |
 | Redis | `litellm-redis` | `redis:alpine` | `6379` | Health check cache（多 pod 共用 health 結果） |
 | Prometheus | `litellm-prometheus` | `prom/prometheus:latest` | `9091` | Metrics 收集（container internal `9090`） |
 
@@ -152,12 +177,156 @@ curl http://localhost:4000/v1/chat/completions \
 
 | 服務 | Health Check 指令 | 間隔 | 起始等待 |
 |------|-------------------|------|----------|
-| LiteLLM Proxy | `curl -f http://localhost:4000/health` | 30s | 60s |
+| LiteLLM Proxy | `python3 -c "import urllib.request..." http://localhost:4000/health/liveliness` | 30s | 60s |
 | PostgreSQL | `pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}` | 10s | 30s |
 | Redis | `redis-cli ping`（預期回傳 `PONG`） | 10s | 10s |
 | Prometheus | 無內建 healthcheck（依賴 container 狀態） | — | — |
 
 `litellm` service 的 `depends_on` 使用 `condition: service_healthy` 確保 Postgres 與 Redis 皆就緒後才啟動。
+
+---
+
+## LiteLLM 架構概覽
+
+### 整體部署架構
+
+```mermaid
+graph TD
+    subgraph Client["外部客戶端"]
+        App["應用服務 / SDK / curl"]
+    end
+
+    subgraph Stack["LiteLLM Stack（Docker Compose）"]
+        direction LR
+        
+        Proxy["LiteLLM Proxy<br/>:4000<br/>OpenAI-compatible API Gateway"]
+        PG["PostgreSQL<br/>Keys · Budgets · Customers<br/>Models · Spend Logs"]
+        Redis["Redis<br/>RPM 計數器<br/>Health Check Cache"]
+        Prom["Prometheus<br/>:9091<br/>監控與 metrics"]
+    end
+
+    subgraph Providers["LLM Providers"]
+        API1["OpenAI"]
+        API2["Anthropic"]
+        API3["Azure OpenAI"]
+        API4["其他 Provider"]
+    end
+
+    App -->|"POST /v1/chat/completions<br/>Authorization: Bearer {virtual_key}"| Proxy
+    Proxy --> PG
+    Proxy --> Redis
+    Proxy --> Prom
+    Proxy --> API1 & API2 & API3 & API4
+```
+
+### 內部實體關聯
+
+LiteLLM 使用四個核心實體來管理 API 金鑰、速率限制與用量：
+
+```mermaid
+flowchart LR
+    Proxy["LiteLLM Proxy<br/>API Gateway 引擎"]
+
+    subgraph 實體["LiteLLM 核心實體（儲存於 PostgreSQL）"]
+        Budget["Budget<br/>定義 rpm_limit / spend_limit"]
+        Customer_A["Customer<br/>user_id: user_a"]
+        Customer_B["Customer<br/>user_id: user_b"]
+        VKey["Virtual Key<br/>sk-xxxx<br/>綁定 models, 可選綁定 budget"]
+    end
+
+    subgraph 計數["RPM 計數器（執行於 Redis）"]
+        Counter_A["(vkey, user_a) 計數"]
+        Counter_B["(vkey, user_b) 計數"]
+    end
+
+    Proxy -->|建立/管理| Budget
+    Proxy -->|建立/管理| Customer_A
+    Proxy -->|建立/管理| Customer_B
+    Proxy -->|建立/管理| VKey
+
+    Customer_A -->|綁定| Budget
+    Customer_B -->|綁定| Budget
+    VKey -.->|可選綁定| Budget
+
+    Proxy -->|驗證 key + 檢查 rpm| Counter_A
+    Proxy -->|驗證 key + 檢查 rpm| Counter_B
+    VKey --> Counter_A
+    VKey --> Counter_B
+    Customer_A --> Counter_A
+    Customer_B --> Counter_B
+```
+
+**建立流程（由 Admin API 依序完成）：**
+
+| 步驟 | API | 產出 | 說明 |
+|:----:|:---|:----|:------|
+| 1 | `POST /budget/new` | `budget_id` | 建立 RPM/花費上限的容器 |
+| 2 | `POST /customer/new` | `user_id` | 建立使用者實體，綁定 budget |
+| 3 | `POST /key/generate` | `sk-xxxx` | 產生 API 金鑰，供客戶端使用 |
+
+### RPM 計數邏輯
+
+LiteLLM 以 **(virtual_key, request.user)** 組合為單位獨立計數，儲存於 Redis：
+
+```
+Redis Key: "rpm:{virtual_key}:{user}"
+Value:     window_start_timestamp | count
+
+Example:
+  rpm:sk-xxxx:user_a  →  1719000000 | 3   ← 3/2 → ❌ 429
+  rpm:sk-xxxx:user_b  →  1719000000 | 1   ← 1/2 → ✅ 200
+```
+
+- **不同 user** 使用相同 virtual key → 各自獨立計數，互不影響
+- **不同 virtual key** 使用相同 user → 各自獨立計數，互不影響
+- `enforce_user_param: true` 強制 request body 必須帶 `user` 參數
+
+### 請求處理循序
+
+以下為一次完整的 API 請求流程：
+
+```mermaid
+sequenceDiagram
+    participant Client as 客戶端
+    participant LiteLLM as LiteLLM Proxy
+    participant DB as PostgreSQL
+    participant Redis as Redis
+    participant Provider as LLM Provider
+
+    Client->>LiteLLM: POST /v1/chat/completions<br/>Authorization: Bearer sk-xxxx<br/>user: user_a
+
+    Note over LiteLLM: ① API Key 驗證
+    LiteLLM->>DB: 查詢 virtual key 有效性與權限
+    DB-->>LiteLLM: key info (models, budget_id)
+
+    Note over LiteLLM: ② RPM 檢查
+    LiteLLM->>Redis: (sk-xxxx, user_a) 計數 +1
+    Redis-->>LiteLLM: 目前計數 ≤ rpm_limit?
+
+    Note over LiteLLM: ③ 模型路由
+    LiteLLM->>DB: 查 model 名稱映射
+    DB-->>LiteLLM: model → 實際 provider/模型名
+
+    Note over LiteLLM: ④ 呼叫 Provider
+    LiteLLM->>Provider: POST 實際 provider API
+    Provider-->>LiteLLM: response
+
+    Note over LiteLLM: ⑤ 記錄用量
+    LiteLLM->>DB: 寫入 spend log
+    LiteLLM-->>Client: OpenAI-compatible response
+```
+
+### 重要觀念
+
+| 名詞 | 所屬層級 | 說明 |
+|------|---------|------|
+| **Virtual Key** | LiteLLM | API 金鑰，儲存於 PostgreSQL，供客戶端認證使用 |
+| **Budget** | LiteLLM | RPM/花費上限定義，儲存於 PostgreSQL |
+| **Customer** | LiteLLM | 使用者實體，綁定 Budget，儲存於 PostgreSQL |
+| **RPM Counter** | Redis | 實際計數器，以 (key, user) 為單位，僅存在 Redis 記憶體中 |
+| **Spend Log** | LiteLLM | 每筆 API 呼叫的用量紀錄，儲存於 PostgreSQL |
+
+> **注意**：本文件所述之 Agent、MCP 等名詞屬於本專案的**開發自動化工具（開發者代理程式與工具協定）**，並非 LiteLLM 部署系統的一部分。LiteLLM 部署系統僅包含 Proxy、PostgreSQL、Redis 與 Prometheus。
 
 ---
 
