@@ -10,7 +10,16 @@
 
 ## 版本變革
 
-### v20260625 — Flat Repository Layout（最新）
+### v20260625-image-parity — Image Parity for AWS-Ready Runtime
+- 新增 `Dockerfile` + `.dockerignore`，以 `docker.litellm.ai/berriai/litellm:main-stable` 為 base image
+- `litellm-entrypoint.sh` + `patch_metrics.py` COPY 至 image `/app/`，不再依賴 compose bind mount
+- `compose.yaml` litellm service 改用 local build (`build: .`) + image tag `litellm-deployment-template:local`
+- **支援 Local Mode / AWS Mode 雙模式部署**：同一 custom image 可用於 local Docker Compose 與未來 AWS ECS Fargate
+- Local Mode：`docker compose up -d`（仍可用，config.yaml 維持 bind mount）
+- AWS Mode：Phase 2 規劃 ECS Fargate + RDS + ElastiCache + Secrets Manager + ALB（本階段未實作）
+- **驗證方式**：`docker build -t litellm-deployment-template:local .` + `docker compose config`
+
+### v20260625 — Flat Repository Layout
 - 將部署檔案從 `deploy/litellm/` 移至 repository root
 - 啟動指令從 `cd deploy/litellm && docker compose up -d` 改為 `docker compose up -d`
 - 所有腳本（`smoke_test.sh`、`test_user_rpm.sh`）改為 root 操作
@@ -44,6 +53,8 @@
 ```
 /
 ├── compose.yaml               # Docker Compose（LiteLLM + PostgreSQL + Redis + Prometheus）
+├── Dockerfile                 # Custom LiteLLM runtime image（Phase 1 image parity）
+├── .dockerignore              # Docker build context 排除清單
 ├── .env.example               # 環境變數範本（複製為 .env）
 ├── config.yaml.example        # LiteLLM 設定檔範本
 ├── config.yaml                # LiteLLM 設定檔（可從 example 複製）
@@ -99,15 +110,29 @@ OPENAI_API_KEY=sk-your-openai-key
 cp config.yaml.example config.yaml
 ```
 
-### 步驟 4：啟動服務
+### 步驟 4：建置 Custom Runtime Image
+
+```bash
+docker build -t litellm-deployment-template:local .
+```
+
+此 image 包含 `litellm-entrypoint.sh` + `patch_metrics.py`，確保 local 與未來 AWS runtime 一致。
+
+### 步驟 5：啟動服務
 
 ```bash
 docker compose up -d
 ```
 
-### 步驟 5：驗證部署
+### 步驟 6：驗證部署
 
 ```bash
+# Docker build 驗證（Phase 1 image parity）
+docker build -t litellm-deployment-template:local .
+
+# Compose config 驗證
+docker compose config
+
 # 健康檢查（基本）
 ./smoke_test.sh
 
@@ -175,7 +200,7 @@ curl http://localhost:4000/v1/chat/completions \
 
 | 服務 | Container Name | Image | Host Port | 用途 |
 |------|---------------|-------|-----------|------|
-| LiteLLM Proxy | `litellm-proxy` | `docker.litellm.ai/berriai/litellm:main-stable` | `4000` | OpenAI-compatible API proxy |
+| LiteLLM Proxy | `litellm-proxy` | `litellm-deployment-template:local`（build from `Dockerfile`） | `4000` | OpenAI-compatible API proxy |
 | PostgreSQL | `litellm-postgres` | `postgres:15-alpine` | —（僅內部 network） | 資料庫（virtual keys、spend logs） |
 | Redis | `litellm-redis` | `redis:alpine` | `6379` | Health check cache（多 pod 共用 health 結果） |
 | Prometheus | `litellm-prometheus` | `prom/prometheus:latest` | `9091` | Metrics 收集（container internal `9090`） |
