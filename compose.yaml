@@ -29,7 +29,8 @@ services:
     entrypoint: ["/bin/sh", "/app/litellm-entrypoint.sh"]
     command: ["--port", "4000"]
     env_file:
-      - .env
+      - path: .env
+        required: false
     environment:
       # LiteLLM 核心設定（由 .env 載入）
       - DATABASE_URL=${DATABASE_URL}
