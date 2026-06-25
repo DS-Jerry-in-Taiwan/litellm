@@ -1,0 +1,64 @@
+# Environment — never bake secrets into image
+.env
+*.env
+*.env.local
+*.env.*.local
+
+# Git
+.git
+.gitignore
+
+# Docs & agent context (local only)
+docs/
+.opencode/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyc
+*.so
+*.egg
+*.egg-info/
+*.whl
+
+# Logs
+*.log
+logs/
+
+# Local temp
+.tmp/
+tmp/
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Credentials
+*.pem
+*.key
+*.crt
+*.csr
+*.p12
+*.jks
+*.pfx
+
+# Build artifacts (rebuild from source; don't carry forward)
+build/
+dist/
+
+# Legacy deploy directory (moved to root 2026-06-25)
+deploy/
+
+# Not needed in image
+README.md
+AGENTS.md
+compose.yaml
+config.yaml
+config.yaml.example

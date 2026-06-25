@@ -8,26 +8,26 @@
 #   3. 只給客戶端使用 virtual key，勿使用 master key
 # =============================================================================
 
-version: "3.9"
-
 services:
   # ---------------------------------------------------------------------------
   # LiteLLM Proxy
   # ---------------------------------------------------------------------------
   litellm:
-    image: docker.litellm.ai/berriai/litellm:main-stable
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: litellm-deployment-template:local
     container_name: litellm-proxy
     # Port mapping — 警告：生產環境不可裸露 HTTP，應透過 TLS reverse proxy
     ports:
       - "4000:4000"
     volumes:
       # 掛載 config.yaml，容器內路徑為 /app/config.yaml
+      # config.yaml 保留 bind mount：本地修改不需 rebuild，符合 local dev 需求
+      # AWS ECS 可選擇：Phase 2 時將 config COPY 進 image 或透過 Secrets/SSM 注入
       - ./config.yaml:/app/config.yaml:ro
-      # 掛載 entrypoint wrapper 與 metrics patch 腳本
-      - ./litellm-entrypoint.sh:/app/litellm-entrypoint.sh:ro
-      - ./patch_metrics.py:/app/patch_metrics.py:ro
-    entrypoint: ["/bin/sh", "/app/litellm-entrypoint.sh"]
-    command: ["--port", "4000"]
+    # entrypoint / command 不在此設定；由 Dockerfile ENTRYPOINT / CMD 提供
+    # litellm-entrypoint.sh + patch_metrics.py 已在 image 內 /app/
     env_file:
       - path: .env
         required: false
