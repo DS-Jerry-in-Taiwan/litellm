@@ -10,7 +10,17 @@
 
 ## 版本變革
 
-### v20260622 — Metrics 修補與 Prometheus 認證（最新）
+### v20260625 — Flat Repository Layout（最新）
+- 將部署檔案從 `deploy/litellm/` 移至 repository root
+- 啟動指令從 `cd deploy/litellm && docker compose up -d` 改為 `docker compose up -d`
+- 所有腳本（`smoke_test.sh`、`test_user_rpm.sh`）改為 root 操作
+
+### v20260623 — LiteLLM 架構文件補強
+- 新增 LiteLLM 架構概覽章節
+- 補充部署架構、內部實體關聯、RPM 計數邏輯與請求處理循序圖
+- 釐清 Agent/MCP 屬於開發自動化工具，不是 LiteLLM runtime 模組
+
+### v20260622 — Metrics 修補與 Prometheus 認證
 - 修復 LiteLLM 1.89.x `/metrics` 404 問題（`patch_metrics.py` + `litellm-entrypoint.sh` wrapper）
 - 新增 Prometheus 認證支援（`prometheus-wrapper.sh`）
 - 修正 compose.yaml healthcheck 改用 python3 檢查 `/health/liveliness`
@@ -32,7 +42,7 @@
 ## 目錄結構
 
 ```
-deploy/litellm/
+/
 ├── compose.yaml               # Docker Compose（LiteLLM + PostgreSQL + Redis + Prometheus）
 ├── .env.example               # 環境變數範本（複製為 .env）
 ├── config.yaml.example        # LiteLLM 設定檔範本
@@ -60,7 +70,6 @@ deploy/litellm/
 ### 步驟 1：複製環境變數範本
 
 ```bash
-cd deploy/litellm
 cp .env.example .env
 ```
 
@@ -469,8 +478,6 @@ Client → Virtual Key → LiteLLM Proxy
 ### 指令範例
 
 ```bash
-cd deploy/litellm
-
 # ⚠️ 請替換為您已透過 Admin UI/API 建立的模型名稱，不代表 active config 已存在
 export TEST_MODEL="your-existing-model-name"
 export LITELLM_API_KEY="sk-..."        # master key 或 admin key

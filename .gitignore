@@ -4,9 +4,9 @@
 *.env.local
 *.env.*.local
 
-# Deploy-specific env (do NOT ignore .env.example)
-deploy/litellm/.env
-deploy/litellm/*.env
+# Legacy deploy-specific env (moved to root on 2026-06-25)
+# deploy/litellm/.env
+# deploy/litellm/*.env
 
 # Credentials & keys
 *.pem
