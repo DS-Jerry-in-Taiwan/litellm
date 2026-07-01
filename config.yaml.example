@@ -60,6 +60,19 @@ litellm_settings:
   redis_port: os.environ/REDIS_PORT
   redis_password: os.environ/REDIS_PASSWORD
 
+  # === Cache — 啟用 LiteLLM Redis cache，供 RPM/TPM/runtime counters 跨 instance 使用 ===
+  # 注意：設定 redis_host/redis_port 只是連線參數；
+  # 必須同時啟用 cache: true + cache_params.type: redis 才會初始化 LiteLLM RedisCache，
+  # 讓子服務（RPM limiter、usage cache）可寫入 Redis。
+  # cache_params 必須明確指定 host/port/password，否則 LiteLLM 不會自動使用
+  # litellm_settings.redis_host 等值（LiteLLM 只在 cache_params 完全空白時才 fallback）。
+  cache: true
+  cache_params:
+    type: redis
+    host: os.environ/REDIS_HOST
+    port: os.environ/REDIS_PORT
+    password: os.environ/REDIS_PASSWORD
+
   # === 上游 provider 全域設定 ===
   # 忽略 provider 不支援的參數，避免 SDK 報錯
   drop_params: true
