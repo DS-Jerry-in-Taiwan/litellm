@@ -43,6 +43,8 @@ services:
       - REDIS_PASSWORD=${REDIS_PASSWORD:-}
       # YAML config 明確載入（LiteLLM 不會自動使用 /app/config.yaml，必須指定）
       - CONFIG_FILE_PATH=/app/config.yaml
+      # 啟用 DB 儲存 model 設定（允許 Admin UI 動態新增 model）
+      - STORE_MODEL_IN_DB=${STORE_MODEL_IN_DB:-True}
     depends_on:
       postgres:
         condition: service_healthy

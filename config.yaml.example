@@ -8,39 +8,17 @@
 # ---------------------------------------------------------------------------
 # 模型清單 — model_list
 # ---------------------------------------------------------------------------
-# 用法：客戶端使用 model_name 請求，LiteLLM 依 litellm_params 路由到實際 provider
-# 詳細 provider model name 格式：https://docs.litellm.ai/docs/providers
+#
+# ⚠️ UI/DB-first 模式：model_list 保持為空，模型與 provider credentials
+#    統一透過 Admin UI / API 管理（store_model_in_db: true）。
+#    靜態註冊模型已廢除，請勿在此檔案填寫 provider API key。
 # ---------------------------------------------------------------------------
-model_list:
-  # === 範例：OpenAI 模型 ===
-  - model_name: gpt-4o-mini
-    litellm_params:
-      model: openai/gpt-4o-mini
-      api_key: os.environ/OPENAI_API_KEY
-      # rpm_limit_per_minute: 60       # 該模型每分鐘請求上限（可選）
-      # max_budget: null               # 該模型最大預算（可選）
-
-  # === 範例：Anthropic 模型 ===
-  # - model_name: claude-3-sonnet
-  #   litellm_params:
-  #     model: anthropic/claude-3-sonnet-20240229
-  #     api_key: os.environ/ANTHROPIC_API_KEY
-
-  # === 範例：Azure OpenAI 模型 ===
-  # - model_name: azure-gpt-4o
-  #   litellm_params:
-  #     model: azure/gpt-4o
-  #     api_key: os.environ/AZURE_API_KEY
-  #     api_base: os.environ/AZURE_API_BASE
-  #     api_version: "2024-06-01"
-
-  # === 範例：Ollama 本地模型 ===
-  # - model_name: ollama-llama3
-  #   litellm_params:
-  #     model: ollama/llama3
-  #     api_base: http://localhost:11434
-
-  # === 新增模型：複製以上區塊並替換 model_name / litellm_params ===
+# Phase 3 前置配置調整（2026-06-24）：不再於 static config 預先註冊 provider models。
+# 統一透過 Admin UI / API 建立 LLM Credentials 與 DB-managed models。
+# 詳細說明：LiteLLM 支援將模型設定存入 PostgreSQL（store_model_in_db: true），
+# 可透過 Admin UI 或 API 動態管理 provider credentials，
+# 避免 provider key rotation 需要重建 container。
+model_list: []
 
 # ---------------------------------------------------------------------------
 # LiteLLM 全域設定 — litellm_settings
@@ -124,3 +102,20 @@ general_settings:
   # === 多組織/多租戶（可選）===
   # store_team_in_db: true
   # default_team_id: "default-team"
+
+# ---------------------------------------------------------------------------
+# 透過 Admin UI 新增 Gemini 模型（不要寫入此檔案）
+# ---------------------------------------------------------------------------
+# 热门 Google AI Studio 公共模型（直接使用 Gemini API，無需 Vertex）：
+#   model_name: gemini-2.5-flash-lite   → litellm_params.model: gemini/gemini-2.5-flash-lite
+#   model_name: gemini-2.5-flash        → litellm_params.model: gemini/gemini-2.5-flash
+#   model_name: gemini-2.5-pro          → litellm_params.model: gemini/gemini-2.5-pro
+#
+# 操作方式（任選一）：
+#   1. Admin UI：http://localhost:4000 → Models → Add Your First Model
+#   2. API：POST /model/new（需附上 LITELLM_MASTER_KEY）
+#
+# Vertex AI（若使用 Google Cloud Vertex AI）：
+#   請在 Admin UI 建立 Vertex AI credential，
+#   範例 model_name: vertex-gemini-2.5-flash → litellm_params.model: vertex_ai/gemini-2.5-flash
+# ---------------------------------------------------------------------------
