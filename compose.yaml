@@ -41,6 +41,8 @@ services:
       - REDIS_HOST=${REDIS_HOST:-redis}
       - REDIS_PORT=${REDIS_PORT:-6379}
       - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      # YAML config 明確載入（LiteLLM 不會自動使用 /app/config.yaml，必須指定）
+      - CONFIG_FILE_PATH=/app/config.yaml
     depends_on:
       postgres:
         condition: service_healthy
