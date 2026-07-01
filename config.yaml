@@ -11,10 +11,10 @@
 # 用法：客戶端使用 model_name 請求，LiteLLM 依 litellm_params 路由到實際 provider
 # 詳細 provider model name 格式：https://docs.litellm.ai/docs/providers
 # ---------------------------------------------------------------------------
-# Phase 3 前置配置調整（2026-06-16）：清空 model_list，待 Phase 3 啟動後
-# 透過 Admin UI 動態新增 provider models，不再依賴靜態 config.yaml 設定。
+# Phase 3 前置配置調整（2026-06-24）：不再於 static config 預先註冊 provider models。
+# 統一透過 Admin UI / API 建立 LLM Credentials 與 DB-managed models。
 # 詳細說明：LiteLLM 支援將 model 設定存入 PostgreSQL（store_model_in_db: true），
-# 可透過 Admin UI 或 API 動態管理，無需重啟 container。
+# 可透過 Admin UI 或 API 動態管理 provider credentials，避免 provider key rotation 需要重建 container。
 model_list: []
 
 # ---------------------------------------------------------------------------

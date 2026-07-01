@@ -43,6 +43,8 @@ services:
       - REDIS_PASSWORD=${REDIS_PASSWORD:-}
       # YAML config 明確載入（LiteLLM 不會自動使用 /app/config.yaml，必須指定）
       - CONFIG_FILE_PATH=/app/config.yaml
+      # 啟用 DB 儲存 model 設定（允許 Admin UI 動態新增 model）
+      - STORE_MODEL_IN_DB=${STORE_MODEL_IN_DB:-True}
     depends_on:
       postgres:
         condition: service_healthy
@@ -65,10 +67,11 @@ services:
   postgres:
     image: postgres:15-alpine
     container_name: litellm-postgres
-    # ⚠️ Phase 3 前置配置調整（2026-06-16）：移除 host ports 區塊。
-    # DB 僅供 litellm-proxy 透過 Docker 內部 network (postgres:5432) 存取，
-    # 不再對 host 暴露，提升安全性。
-    # 若需 host 連線除錯，可重新加入 ports: ["5433:5432"]。
+    # Host port is exposed for trusted internal-network clients only.
+    # LiteLLM itself still connects over the Docker network at postgres:5432.
+    # Use host port 5433 to avoid conflicts with any host-level PostgreSQL on 5432.
+    ports:
+      - "5433:5432"
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
