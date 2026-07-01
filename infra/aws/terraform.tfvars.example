@@ -1,0 +1,160 @@
+# =============================================================================
+# Example Terraform variable values — AWS ECS Fargate Infrastructure Skeleton
+# =============================================================================
+# COPY THIS FILE TO terraform.tfvars AND FILL IN YOUR VALUES.
+# DO NOT COMMIT terraform.tfvars WITH REAL SECRETS.
+# =============================================================================
+#
+# Usage:
+#   cp infra/aws/terraform.tfvars.example infra/aws/terraform.tfvars
+#   # Edit infra/aws/terraform.tfvars with your values
+#   terraform -chdir=infra/aws plan -var-file=infra/aws/terraform.tfvars
+# =============================================================================
+
+# ─────────────────────────────────────────────────────────────────────────────
+# AWS General
+# ─────────────────────────────────────────────────────────────────────────────
+
+aws_region = "us-east-1"
+
+# Tags applied to all resources. Keep Project/Environment/ManagedBy as shown.
+tags = {
+  Project     = "LiteLLM"
+  Environment = "production"
+  ManagedBy   = "Terraform"
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# VPC / Networking
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Set to false to use an existing VPC (requires all existing_* variables below)
+create_vpc = true
+
+# --- New VPC mode (used when create_vpc = true) ---
+# CIDR for new VPC
+vpc_cidr = "10.0.0.0/16"
+
+# Availability zones (must exist in the selected region)
+availability_zones = ["us-east-1a", "us-east-1b"]
+
+# Subnet CIDRs
+public_subnet_cidrs      = ["10.0.1.0/24", "10.0.2.0/24"]
+private_app_subnet_cidrs = ["10.0.11.0/24", "10.0.12.0/24"]
+private_data_subnet_cidrs = ["10.0.21.0/24", "10.0.22.0/24"]
+
+# Enable NAT Gateway for ECS outbound internet access
+enable_nat_gateway = true
+
+# --- Existing VPC mode (used when create_vpc = false) ---
+# Uncomment and fill in ONLY when create_vpc = false.
+# All IDs below must belong to the same existing VPC.
+
+# existing_vpc_id = "vpc-0123456789abcdef0"
+# existing_public_subnet_ids      = ["subnet-0abcdef1234567890", "subnet-0abcdef1234567891"]
+# existing_private_app_subnet_ids  = ["subnet-0abcdef1234567892", "subnet-0abcdef1234567893"]
+# existing_private_data_subnet_ids = ["subnet-0abcdef1234567894", "subnet-0abcdef1234567895"]
+# existing_vpc_alb_sg_id  = "sg-0abcdef1234567896"
+# existing_vpc_ecs_sg_id  = "sg-0abcdef1234567897"
+# existing_vpc_data_sg_id = "sg-0abcdef1234567898"
+# NOTE: Do NOT use real subnet or security group IDs — replace with your own values.
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ECR
+# ─────────────────────────────────────────────────────────────────────────────
+
+ecr_repository_name = "litellm-deployment-template"
+
+# ── Image tag ─────────────────────────────────────────────────────────────────
+# REQUIRED: Must be a pinned, immutable tag (e.g. 'v20260625-image-parity')
+# or a full image digest (e.g. 'sha256:abc123...').
+# NEVER use 'latest' in any prd-like environment (validated by Terraform).
+# The Releaser must pin this tag before promoting to ECS.
+image_tag = "replace-with-promoted-version-tag" # FIXME: update to your actual promoted image tag before terraform plan
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ECS Fargate
+# ─────────────────────────────────────────────────────────────────────────────
+
+ecs_cluster_name  = "litellm-cluster"
+ecs_desired_count = 2   # Use 1 for dev; minimum 2 recommended for production HA
+ecs_min_capacity  = 1
+ecs_max_capacity  = 4
+
+# Fargate CPU/memory — valid combos: 256(0.25GB), 512(1GB), 1024(2GB), 2048(4-8GB), 4096(8-16GB)
+ecs_task_cpu    = 1024
+ecs_task_memory = 2048
+
+# Container port — MUST match Dockerfile CMD (4000)
+container_port = 4000
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ALB
+# ─────────────────────────────────────────────────────────────────────────────
+
+alb_name = "litellm-alb"
+
+# LiteLLM health check endpoint
+alb_health_check_path     = "/health/liveliness"
+alb_health_check_matcher  = "200"
+
+# ACM certificate ARN for HTTPS.
+# Leave empty string for HTTP-only dev placeholder.
+# For production, provide an ACM certificate ARN:
+#   acm_certificate_arn = "arn:aws:acm:us-east-1:<account-id>:certificate/<uuid>"
+acm_certificate_arn = ""
+
+# ─────────────────────────────────────────────────────────────────────────────
+# RDS PostgreSQL
+# ─────────────────────────────────────────────────────────────────────────────
+
+rds_instance_class       = "db.t3.micro"   # Use db.r6g.large or larger for production
+rds_allocated_storage_gb = 20
+rds_db_name              = "litellm"
+rds_username             = "litellm_admin" # Placeholder; real password from Secrets Manager
+
+# NOTE: rds_password is NOT set here.
+# It must be stored in AWS Secrets Manager at the path defined by
+# var.secretsmanager_secret_name_db (default: "litellm/database-url").
+# The Terraform module reads it from Secrets Manager.
+
+rds_multi_az              = false  # Set to true for production
+rds_backup_retention_days = 1
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ElastiCache Redis/Valkey
+# ─────────────────────────────────────────────────────────────────────────────
+
+redis_node_type   = "cache.t3.micro"  # Use larger node for production
+redis_num_nodes   = 1                 # Use 2+ for prod HA
+redis_port        = 6379
+
+# NOTE: redis_password is NOT set here.
+# Store in AWS Secrets Manager at the path defined by
+# var.secretsmanager_secret_name_redis (default: "litellm/redis-password").
+# Leave empty string in Secrets Manager if Redis auth is disabled.
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Secrets Manager / SSM Parameter Store
+# ─────────────────────────────────────────────────────────────────────────────
+# Secret names (ARNs are derived by the Terraform modules).
+# Store the ACTUAL secret values in AWS Secrets Manager BEFORE applying.
+# Terraform reads secret ARNs but NOT secret values.
+
+secretsmanager_secret_name_litellm_master = "litellm/litellm-master-key"
+secretsmanager_secret_name_db             = "litellm/database-url"
+secretsmanager_secret_name_redis          = "litellm/redis-password"
+secretsmanager_secret_name_salt           = "litellm/litellm-salt-key"
+ssm_parameter_name_openai_key             = "litellm/openai-api-key"
+
+# SSM OPENAI_API_KEY: false = document-only, no placeholder created (prd-like default)
+# true = creates SSM parameter with no initial value (dev quickstart only)
+create_ssm_parameter_openai_key = false
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CloudWatch
+# ─────────────────────────────────────────────────────────────────────────────
+
+cloudwatch_log_group_name     = "/ecs/litellm"
+cloudwatch_log_retention_days = 14
+
