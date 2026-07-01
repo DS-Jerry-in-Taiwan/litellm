@@ -56,3 +56,7 @@ logs/
 # Project-specific: docs & opencode (do NOT commit context/task files)
 docs/
 .opencode/
+opencode.json
+
+# Credentials directory (contains API keys and service accounts)
+credentials/
