@@ -112,6 +112,12 @@ variable "secretsmanager_secret_name_salt" {
   default     = "litellm/litellm-salt-key"
 }
 
+variable "secretsmanager_secret_name_ui_password" {
+  description = "Secrets Manager secret name for UI_PASSWORD."
+  type        = string
+  default     = "litellm/ui-password"
+}
+
 variable "ssm_parameter_name_openai_key" {
   description = "SSM Parameter Store name for OPENAI_API_KEY."
   type        = string

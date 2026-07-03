@@ -66,6 +66,7 @@ module "data" {
   secretsmanager_secret_name_db             = var.secretsmanager_secret_name_db
   secretsmanager_secret_name_redis          = var.secretsmanager_secret_name_redis
   secretsmanager_secret_name_salt           = var.secretsmanager_secret_name_salt
+  secretsmanager_secret_name_ui_password    = var.secretsmanager_secret_name_ui_password
   ssm_parameter_name_openai_key             = var.ssm_parameter_name_openai_key
 
   # SSM parameter creation (default off; prevents placeholder-as-secret)
@@ -134,6 +135,7 @@ module "ecs" {
   database_url_arn       = module.data.database_url_arn
   redis_password_arn     = module.data.redis_password_arn
   litellm_salt_key_arn   = module.data.litellm_salt_key_arn
+  ui_password_arn        = module.data.ui_password_arn
   openai_api_key_arn     = module.data.openai_api_key_arn
 
   # Redis endpoint (injected as ECS env var)

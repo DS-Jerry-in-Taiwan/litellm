@@ -50,6 +50,14 @@ resource "aws_secretsmanager_secret" "litellm_salt_key" {
   tags = merge(var.tags, { Name = "litellm-salt-key" })
 }
 
+# UI_PASSWORD — stored in Secrets Manager; Terraform tracks the ARN only
+resource "aws_secretsmanager_secret" "ui_password" {
+  name        = var.secretsmanager_secret_name_ui_password
+  description = "LiteLLM Admin UI login password"
+
+  tags = merge(var.tags, { Name = "litellm-ui-password" })
+}
+
 # ─────────────────────────────────────────────────────────────────────────────
 # SSM Parameter Store — Provider API keys (conditional creation)
 #
@@ -111,7 +119,7 @@ resource "aws_db_subnet_group" "main" {
 resource "aws_db_instance" "main" {
   identifier     = "litellm-postgres"
   engine         = "postgres"
-  engine_version = "15.4"
+  engine_version = "15.18"
   instance_class = var.rds_instance_class
 
   allocated_storage     = var.rds_allocated_storage_gb
@@ -190,52 +198,17 @@ resource "aws_elasticache_replication_group" "main" {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Secrets Manager resource policies — deny GetSecretValue over non-TLS
-# Applied to all 4 secrets to enforce encrypted-in-transit for every secret.
+# Secrets Manager resource policies — REMOVED for Route B-light temporary test
 # ─────────────────────────────────────────────────────────────────────────────
-
-data "aws_iam_policy_document" "secrets_manager_deny_unencrypted" {
-  statement {
-    sid    = "DenyUnencryptedSecrets"
-    effect = "Deny"
-
-    actions = ["secretsmanager:GetSecretValue"]
-
-    resources = [
-      aws_secretsmanager_secret.litellm_master_key.arn,
-      aws_secretsmanager_secret.database_url.arn,
-      aws_secretsmanager_secret.redis_password.arn,
-      aws_secretsmanager_secret.litellm_salt_key.arn,
-    ]
-
-    condition {
-      test     = "Null"
-      variable = "aws:SecureTransport"
-      values   = ["false"]
-    }
-  }
-}
-
-resource "aws_secretsmanager_secret_policy" "litellm_master_key" {
-  secret_arn = aws_secretsmanager_secret.litellm_master_key.arn
-
-  policy = data.aws_iam_policy_document.secrets_manager_deny_unencrypted.json
-}
-
-resource "aws_secretsmanager_secret_policy" "database_url" {
-  secret_arn = aws_secretsmanager_secret.database_url.arn
-
-  policy = data.aws_iam_policy_document.secrets_manager_deny_unencrypted.json
-}
-
-resource "aws_secretsmanager_secret_policy" "redis_password" {
-  secret_arn = aws_secretsmanager_secret.redis_password.arn
-
-  policy = data.aws_iam_policy_document.secrets_manager_deny_unencrypted.json
-}
-
-resource "aws_secretsmanager_secret_policy" "litellm_salt_key" {
-  secret_arn = aws_secretsmanager_secret.litellm_salt_key.arn
-
-  policy = data.aws_iam_policy_document.secrets_manager_deny_unencrypted.json
-}
+# Trade-off documentation (HITL 2026-07-01):
+#   The aws_iam_policy_document MalformedPolicyDocumentException persisted after
+#   fix attempts (resources=["*"]). The TLS enforcement policy (deny GetSecretValue
+#   over non-TLS) is non-essential for this temporary test deployment.
+#
+#   LOSE: TLS enforcement on Secrets Manager API calls → secrets can be read
+#         over unencrypted transport (low risk for short-lived test)
+#   GAIN: Unblocked terraform apply; secrets still encrypted at rest (AES256)
+#         by default and accessible only via IAM
+#   RISK: Low — temporary test, 1-day lifecycle, immediate terraform destroy
+#   RESTORE: Uncomment + fix Principal before production deployment
+#

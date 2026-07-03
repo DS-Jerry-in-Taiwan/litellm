@@ -144,6 +144,11 @@ variable "litellm_salt_key_arn" {
   type        = string
 }
 
+variable "ui_password_arn" {
+  description = "ARN of the UI_PASSWORD Secrets Manager secret."
+  type        = string
+}
+
 variable "openai_api_key_arn" {
   description = "ARN of the OPENAI_API_KEY SSM parameter."
   type        = string

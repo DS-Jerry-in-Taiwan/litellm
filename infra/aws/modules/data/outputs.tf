@@ -24,6 +24,11 @@ output "litellm_salt_key_arn" {
   value       = aws_secretsmanager_secret.litellm_salt_key.arn
 }
 
+output "ui_password_arn" {
+  description = "ARN of the UI_PASSWORD Secrets Manager secret."
+  value       = aws_secretsmanager_secret.ui_password.arn
+}
+
 output "openai_api_key_arn" {
   description = <<-EOT
     ARN of the OPENAI_API_KEY SSM parameter.
