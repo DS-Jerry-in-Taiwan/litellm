@@ -136,6 +136,38 @@ variable "enable_nat_gateway" {
   default     = true
 }
 
+variable "provision_subnets_and_sgs" {
+  description = <<-EOT
+    When create_vpc = false, provision missing subnets, route tables, and security groups
+    inside the existing VPC. Does not create or manage the existing VPC itself.
+    - create_vpc = true: ignored (full VPC is created).
+    - create_vpc = false, provision_subnets_and_sgs = false: use all existing_* inputs.
+    - create_vpc = false, provision_subnets_and_sgs = true: create new subnets/SGs inside existing VPC.
+  EOT
+  type        = bool
+  default     = false
+}
+
+variable "enable_vpc_endpoints" {
+  description = <<-EOT
+    Whether to create VPC Interface and Gateway Endpoints for private ECS tasks.
+    Creates: ecr.api, ecr.dkr, secretsmanager, logs (Interface) + s3 (Gateway).
+    Requires private app subnet IDs and route table IDs (provisioned or via existing_* inputs).
+    Default false to avoid unexpected cost in existing environments.
+  EOT
+  type        = bool
+  default     = false
+}
+
+variable "existing_private_app_route_table_ids" {
+  description = <<-EOT
+    Existing private app route table IDs when create_vpc=false and provision_subnets_and_sgs=false.
+    Used for S3 Gateway Endpoint attachment. Must belong to the existing VPC.
+  EOT
+  type        = list(string)
+  default     = []
+}
+
 # ─────────────────────────────────────────────────────────────────────────────
 # ECR Repository
 # ─────────────────────────────────────────────────────────────────────────────
@@ -341,6 +373,12 @@ variable "secretsmanager_secret_name_salt" {
   description = "Secrets Manager secret name for LITELLM_SALT_KEY."
   type        = string
   default     = "litellm/litellm-salt-key"
+}
+
+variable "secretsmanager_secret_name_ui_password" {
+  description = "Secrets Manager secret name for UI_PASSWORD."
+  type        = string
+  default     = "litellm/ui-password"
 }
 
 variable "ssm_parameter_name_openai_key" {

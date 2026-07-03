@@ -68,6 +68,7 @@ resource "aws_iam_role_policy" "ecs_execution" {
             var.database_url_arn,
             var.redis_password_arn,
             var.litellm_salt_key_arn,
+            var.ui_password_arn,
           ]
         },
       ],
@@ -184,6 +185,10 @@ resource "aws_ecs_task_definition" "litellm" {
           name  = "STORE_MODEL_IN_DB"
           value = "True"
         },
+        {
+          name  = "UI_USERNAME"
+          value = "admin"
+        },
       ]
 
       # Secrets list — OPENAI_API_KEY is conditionally included only when
@@ -206,6 +211,10 @@ resource "aws_ecs_task_definition" "litellm" {
           {
             name      = "REDIS_PASSWORD"
             valueFrom = var.redis_password_arn
+          },
+          {
+            name      = "UI_PASSWORD"
+            valueFrom = var.ui_password_arn
           },
         ],
         (
@@ -375,9 +384,11 @@ resource "aws_ecs_service" "main" {
     assign_public_ip = false
   }
 
-  # Prevent Terraform from reverting health check modifications
-  # (ECS will fail tasks that don't pass the health check)
-  health_check_grace_period_seconds = 60
+  # Grace period for ALB health checks.
+  # LiteLLM startup (DB migrations + server init) takes ~50s, and the ALB
+  # needs 2 consecutive healthy checks (2×30s=60s) to mark the target healthy.
+  # Total ~110s; we use 180s to avoid deployment rollout failures.
+  health_check_grace_period_seconds = 180
 
   tags = merge(var.tags, { Name = "litellm-ecs-service" })
 

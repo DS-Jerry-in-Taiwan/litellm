@@ -85,6 +85,30 @@ variable "enable_nat_gateway" {
   default     = true
 }
 
+variable "provision_subnets_and_sgs" {
+  description = "When create_vpc = false, provision missing subnets, route tables, and security groups inside the existing VPC. Does not create or manage the existing VPC itself."
+  type        = bool
+  default     = false
+}
+
+variable "aws_region" {
+  description = "AWS region used to construct VPC endpoint service names."
+  type        = string
+  default     = "us-east-1"
+}
+
+variable "enable_vpc_endpoints" {
+  description = "Whether to create VPC endpoints required for private ECS tasks to reach AWS services without NAT."
+  type        = bool
+  default     = false
+}
+
+variable "existing_private_app_route_table_ids" {
+  description = "Existing private app route table IDs for S3 Gateway Endpoint when create_vpc=false and provision_subnets_and_sgs=false."
+  type        = list(string)
+  default     = []
+}
+
 variable "tags" {
   description = "Tags to apply to all resources."
   type        = map(string)

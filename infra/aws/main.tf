@@ -18,21 +18,25 @@ locals {
 module "networking" {
   source = "./modules/networking"
 
-  create_vpc                       = var.create_vpc
-  existing_vpc_id                  = var.existing_vpc_id
-  existing_public_subnet_ids       = var.existing_public_subnet_ids
-  existing_private_app_subnet_ids  = var.existing_private_app_subnet_ids
-  existing_private_data_subnet_ids = var.existing_private_data_subnet_ids
-  existing_vpc_alb_sg_id           = var.existing_vpc_alb_sg_id
-  existing_vpc_ecs_sg_id           = var.existing_vpc_ecs_sg_id
-  existing_vpc_data_sg_id          = var.existing_vpc_data_sg_id
-  vpc_cidr                         = var.vpc_cidr
-  availability_zones               = var.availability_zones
-  public_subnet_cidrs              = var.public_subnet_cidrs
-  private_app_subnet_cidrs         = var.private_app_subnet_cidrs
-  private_data_subnet_cidrs        = var.private_data_subnet_cidrs
-  enable_nat_gateway               = var.enable_nat_gateway
-  tags                             = local.common_tags
+  create_vpc                           = var.create_vpc
+  existing_vpc_id                      = var.existing_vpc_id
+  existing_public_subnet_ids           = var.existing_public_subnet_ids
+  existing_private_app_subnet_ids      = var.existing_private_app_subnet_ids
+  existing_private_data_subnet_ids     = var.existing_private_data_subnet_ids
+  existing_vpc_alb_sg_id               = var.existing_vpc_alb_sg_id
+  existing_vpc_ecs_sg_id               = var.existing_vpc_ecs_sg_id
+  existing_vpc_data_sg_id              = var.existing_vpc_data_sg_id
+  vpc_cidr                             = var.vpc_cidr
+  availability_zones                   = var.availability_zones
+  public_subnet_cidrs                  = var.public_subnet_cidrs
+  private_app_subnet_cidrs             = var.private_app_subnet_cidrs
+  private_data_subnet_cidrs            = var.private_data_subnet_cidrs
+  enable_nat_gateway                   = var.enable_nat_gateway
+  aws_region                           = var.aws_region
+  provision_subnets_and_sgs            = var.provision_subnets_and_sgs
+  enable_vpc_endpoints                 = var.enable_vpc_endpoints
+  existing_private_app_route_table_ids = var.existing_private_app_route_table_ids
+  tags                                 = local.common_tags
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -66,6 +70,7 @@ module "data" {
   secretsmanager_secret_name_db             = var.secretsmanager_secret_name_db
   secretsmanager_secret_name_redis          = var.secretsmanager_secret_name_redis
   secretsmanager_secret_name_salt           = var.secretsmanager_secret_name_salt
+  secretsmanager_secret_name_ui_password    = var.secretsmanager_secret_name_ui_password
   ssm_parameter_name_openai_key             = var.ssm_parameter_name_openai_key
 
   # SSM parameter creation (default off; prevents placeholder-as-secret)
@@ -134,6 +139,7 @@ module "ecs" {
   database_url_arn       = module.data.database_url_arn
   redis_password_arn     = module.data.redis_password_arn
   litellm_salt_key_arn   = module.data.litellm_salt_key_arn
+  ui_password_arn        = module.data.ui_password_arn
   openai_api_key_arn     = module.data.openai_api_key_arn
 
   # Redis endpoint (injected as ECS env var)
