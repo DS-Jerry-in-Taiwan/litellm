@@ -32,7 +32,7 @@ resource "aws_ecr_lifecycle_policy" "main" {
         description  = "Keep last 5 versioned images (tags starting with 'v')"
         selection = {
           tagStatus     = "tagged"
-          tagPrefixList = ["v"] # Covers v1, v2, v20260625-image-parity, etc.
+          tagPrefixList = ["v"]
           countType     = "imageCountMoreThan"
           countNumber   = 5
         }
@@ -46,6 +46,7 @@ resource "aws_ecr_lifecycle_policy" "main" {
         selection = {
           tagStatus   = "untagged"
           countType   = "sinceImagePushed"
+          countUnit   = "days"
           countNumber = 14
         }
         action = {
