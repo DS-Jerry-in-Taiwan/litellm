@@ -60,6 +60,50 @@ enable_nat_gateway = true
 # NOTE: Do NOT use real subnet or security group IDs — replace with your own values.
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Route B-light: Existing VPC temporary test example
+# ─────────────────────────────────────────────────────────────────────────────
+# Uncomment to test LiteLLM ECS Fargate in the existing litellm-trial-vpc.
+# Creates new public (1c), private app (1a/1c), private data (1a/1c) subnets,
+# plus ALB/ECS/Data security groups, and private route tables.
+# No NAT Gateway, HTTP-only ALB (port 80). Image must be pre-built and tagged.
+#
+# Prerequisites:
+#   - Existing VPC: vpc-0ce2ab2e8878f6078 (litellm-trial-vpc)
+#   - Existing public subnet 1a: subnet-076c8f31de63a3220 (10.60.1.0/24)
+#   - Existing IGW already attached to the VPC
+#   - ECR repository with image tag v20260625-image-parity already pushed
+#   - Secrets pre-populated in AWS Secrets Manager
+#
+# AZ ordering note — CRITICAL for ALB 2-AZ requirement:
+#   `public_subnet_cidrs` lists ONLY the NEW public subnet(s) to create.
+#   The existing public subnet (1a) is supplied separately via
+#   `existing_public_subnet_ids` and is NOT repeated in `public_subnet_cidrs`.
+#   `availability_zones` is shared across public, private_app, and private_data
+#   subnet creation. The order here maps CIDRs[0] → AZs[0], CIDRs[1] → AZs[1], etc.
+#   New public subnet (10.60.2.0/24) must land in 1c to pair with existing 1a
+#   public subnet, so AZ order is swapped: 1c first, 1a second.
+#   Private subnet CIDRs are ordered 1a→1c to match the AZ list after the swap.
+#
+# aws_region                    = "ap-northeast-1"
+# create_vpc                    = false
+# existing_vpc_id               = "vpc-0ce2ab2e8878f6078"
+# existing_public_subnet_ids    = ["subnet-076c8f31de63a3220"]  # AZ: ap-northeast-1a
+# provision_subnets_and_sgs     = true
+# availability_zones            = ["ap-northeast-1c", "ap-northeast-1a"]  # swap: new public → 1c
+# public_subnet_cidrs          = ["10.60.2.0/24"]                          # new public → AZs[0] = 1c
+# private_app_subnet_cidrs     = ["10.60.10.0/24", "10.60.11.0/24"]       # 1a, 1c
+# private_data_subnet_cidrs    = ["10.60.20.0/24", "10.60.21.0/24"]       # 1a, 1c
+# enable_nat_gateway            = false
+# enable_vpc_endpoints          = true  # Required for private ECS tasks without NAT; creates ecr.api, ecr.dkr, secretsmanager, logs (Interface) + s3 (Gateway)
+# image_tag                     = "v20260625-image-parity"
+# ecs_desired_count             = 1
+# ecs_task_cpu                  = 512
+# ecs_task_memory               = 1024
+# rds_multi_az                 = false
+# cloudwatch_log_retention_days = 3
+# acm_certificate_arn          = ""
+
+# ─────────────────────────────────────────────────────────────────────────────
 # ECR
 # ─────────────────────────────────────────────────────────────────────────────
 
