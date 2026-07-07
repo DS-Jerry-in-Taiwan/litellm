@@ -1,0 +1,18 @@
+# =============================================================================
+# Example terraform.tfvars — Company Existing AWS Infrastructure
+# =============================================================================
+# 複製為 terraform.tfvars 並填入實際值。
+# terraform.tfvars 已在 .gitignore 中，不會被提交。
+# =============================================================================
+
+# ── AWS 區域 ──────────────────────────────────────────────────────────────
+region = "ap-northeast-1"
+
+# ── 既有 VPC ─────────────────────────────────────────────────────────────
+existing_vpc_id               = "vpc-xxxxxxxxxxxxxxxxx"
+existing_private_app_subnet_ids  = ["subnet-xxxxx", "subnet-xxxxx"]
+existing_private_data_subnet_ids = ["subnet-xxxxx", "subnet-xxxxx"]
+
+# ── LiteLLM Master Key（將存入 Secrets Manager）─────────────────────────
+litellm_master_key = "sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+litellm_salt_key   = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
