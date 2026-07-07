@@ -58,10 +58,17 @@ docs/
 .opencode/
 opencode.json
 
-# Terraform generated artifacts (provider cache, graph outputs)
+# Terraform generated artifacts (provider cache, state, variable files)
 infra/aws/.terraform/
 infra/aws/terraform-graph.dot
 infra/aws/terraform-graph.svg
+deploy/aws/production/.terraform/
+deploy/aws/production/terraform.tfstate
+deploy/aws/production/terraform.tfstate.backup
+deploy/aws/production/terraform.tfvars
 
 # Credentials directory (contains API keys and service accounts)
 credentials/
+
+# OpenCode runtime data
+.omo/
