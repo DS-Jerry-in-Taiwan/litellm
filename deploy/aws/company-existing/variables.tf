@@ -46,13 +46,13 @@ variable "existing_private_data_subnet_ids" {
 variable "existing_ecs_security_group_id" {
   description = "ID of existing security group for ECS tasks (port 4000 from ALB)"
   type        = string
-  default     = ""  # Will be created in Phase 3 if empty
+  default     = "" # Will be created in Phase 3 if empty
 }
 
 variable "existing_data_security_group_id" {
   description = "ID of existing security group for RDS/Redis (5432/6379 from ECS)"
   type        = string
-  default     = ""  # Will be created in Phase 3 if empty
+  default     = "" # Will be created in Phase 3 if empty
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -83,6 +83,11 @@ variable "image_tag" {
     condition     = var.image_tag != "latest"
     error_message = "image_tag must NOT be 'latest'. Use a pinned version tag or digest."
   }
+}
+
+variable "ecr_repository_arn" {
+  description = "ARN of the ECR repository containing the LiteLLM container image"
+  type        = string
 }
 
 variable "container_port" {

@@ -22,11 +22,17 @@ locals {
 }
 
 # ═════════════════════════════════════════════════════════════════════════════
-# Phase 1: Secrets Manager + IAM (to be added)
+# Phase 1: Secrets Manager + IAM
+#   • aws_secretsmanager_secret.litellm_master_key     (secrets.tf)
+#   • aws_secretsmanager_secret.litellm_database_url   (secrets.tf)
+#   • aws_secretsmanager_secret.litellm_salt_key       (secrets.tf)
+#   • aws_iam_role.ecs_execution + policy             (iam.tf)
+#   • aws_iam_role.ecs_task + policy                  (iam.tf)
+#   • aws_cloudwatch_log_group.ecs                    (cloudwatch.tf)
 # ═════════════════════════════════════════════════════════════════════════════
 
 # ═════════════════════════════════════════════════════════════════════════════
-# Phase 2: ECS + ALB + CloudWatch (to be added)
+# Phase 2: ECS + ALB (to be added)
 # ═════════════════════════════════════════════════════════════════════════════
 
 # ═════════════════════════════════════════════════════════════════════════════

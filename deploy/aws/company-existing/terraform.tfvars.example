@@ -16,3 +16,7 @@ existing_private_data_subnet_ids = ["subnet-xxxxx", "subnet-xxxxx"]
 # ── LiteLLM Master Key（將存入 Secrets Manager）─────────────────────────
 litellm_master_key = "sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 litellm_salt_key   = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+# ── LiteLLM 容器映像 ────────────────────────────────────────────────────
+image_tag            = "v1.0.0"
+ecr_repository_arn   = "arn:aws:ecr:ap-northeast-1:123456789012:repository/litellm"

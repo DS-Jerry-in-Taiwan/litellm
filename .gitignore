@@ -19,6 +19,8 @@
 
 # Secrets
 *secret*
+# Exception: Terraform resource definition files must be committed
+!deploy/aws/company-existing/secrets.tf
 *credential*
 *.password
 *.passwd
