@@ -32,7 +32,19 @@ locals {
 # ═════════════════════════════════════════════════════════════════════════════
 
 # ═════════════════════════════════════════════════════════════════════════════
-# Phase 2: ECS + ALB (to be added)
+# Phase 2: ECS + ALB
+#   • aws_security_group.alb                      (sg.tf)
+#   • aws_security_group.ecs                      (sg.tf)
+#   • aws_vpc_security_group_ingress_rule.ecs_from_alb   (sg.tf)
+#   • aws_vpc_security_group_ingress_rule.alb_http      (sg.tf)
+#   • aws_vpc_security_group_egress_rule.alb_to_ecs      (sg.tf)
+#   • aws_vpc_security_group_egress_rule.ecs_to_data    (sg.tf)
+#   • aws_lb.main                                 (alb.tf)
+#   • aws_lb_target_group.litellm                (alb.tf)
+#   • aws_lb_listener.http                       (alb.tf)
+#   • aws_ecs_cluster.main                       (ecs.tf)
+#   • aws_ecs_task_definition.litellm            (ecs.tf)
+#   • aws_ecs_service.litellm                    (ecs.tf)
 # ═════════════════════════════════════════════════════════════════════════════
 
 # ═════════════════════════════════════════════════════════════════════════════
