@@ -139,6 +139,15 @@ resource "aws_iam_role_policy" "ecs_task" {
           "logs:PutLogEvents"
         ]
         Resource = "${aws_cloudwatch_log_group.ecs.arn}:*"
+      },
+      {
+        # S3: Read LiteLLM proxy config from the config bucket
+        Sid    = "S3ReadConfig"
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject"
+        ]
+        Resource = "${aws_s3_bucket.config.arn}/*"
       }
     ]
   })

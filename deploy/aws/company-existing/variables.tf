@@ -180,6 +180,12 @@ variable "s3_force_destroy" {
 # LiteLLM Config (Phase 3+)
 # ─────────────────────────────────────────────────────────────────────────────
 
+variable "proxy_config_source" {
+  description = "Local path to the LiteLLM proxy config.yaml. Empty string means use baked-in config."
+  type        = string
+  default     = ""
+}
+
 variable "proxy_config" {
   description = "LiteLLM proxy configuration (YAML map). Uploaded to S3 in Phase 3."
   type        = any

@@ -48,7 +48,15 @@ locals {
 # ═════════════════════════════════════════════════════════════════════════════
 
 # ═════════════════════════════════════════════════════════════════════════════
-# Phase 3: S3 config + migration task (to be added)
+# Phase 3: S3 config + migration task
+#   • data.aws_caller_identity.current               (data_sources.tf)
+#   • aws_s3_bucket.config                         (s3.tf)
+#   • aws_s3_bucket_versioning.config              (s3.tf)
+#   • aws_s3_bucket_server_side_encryption_configuration.config  (s3.tf)
+#   • aws_s3_bucket_public_access_block.config     (s3.tf)
+#   • aws_s3_object.config                        (s3.tf)
+#   • aws_ecs_task_definition.migration           (migration.tf)
+#   • terraform_data.force_deploy                  (ecs.tf)
 # ═════════════════════════════════════════════════════════════════════════════
 
 # ═════════════════════════════════════════════════════════════════════════════

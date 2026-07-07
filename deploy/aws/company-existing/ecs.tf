@@ -32,6 +32,13 @@ resource "aws_ecs_task_definition" "litellm" {
         }
       ]
 
+      environment = [
+        {
+          name  = "S3_CONFIG_URL"
+          value = "s3://${aws_s3_bucket.config.id}/config.yaml"
+        }
+      ]
+
       secrets = [
         {
           name      = "LITELLM_MASTER_KEY"
@@ -70,6 +77,18 @@ resource "aws_ecs_task_definition" "litellm" {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Config Redeploy Trigger
+# ─────────────────────────────────────────────────────────────────────────────
+# When the S3 config object's etag changes (i.e., a new config.yaml is
+# uploaded), this terraform_data resource's output changes, which triggers
+# the ECS service to force a new deployment.
+# ─────────────────────────────────────────────────────────────────────────────
+
+resource "terraform_data" "force_deploy" {
+  input = var.proxy_config_source != "" ? aws_s3_object.config.etag : ""
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
 # ECS Service
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -79,6 +98,9 @@ resource "aws_ecs_service" "litellm" {
   task_definition = aws_ecs_task_definition.litellm.arn
   desired_count   = var.ecs_desired_count
   launch_type     = "FARGATE"
+
+  # Force new deployment when S3 config etag changes
+  force_new_deployment = var.proxy_config_source != "" ? true : null
 
   network_configuration {
     subnets          = var.existing_private_app_subnet_ids
