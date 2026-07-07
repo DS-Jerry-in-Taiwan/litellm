@@ -62,6 +62,13 @@ litellm_settings:
   # num_retries: 3
   # timeout: 60
 
+  # === Model Fallback — primary 不可用時自動切換 ===
+  fallbacks: [
+    {"agent-architect-primary": ["agent-architect-fallback-1", "deepseek-v4-flash"]},
+    {"agent-developer-primary": ["agent-lightweight-primary", "deepseek-v4-flash"]},
+    {"agent-qa-primary": ["agent-lightweight-primary", "deepseek-v4-flash"]}
+  ]
+
 # ---------------------------------------------------------------------------
 # 一般設定 — general_settings
 # ---------------------------------------------------------------------------
