@@ -19,6 +19,8 @@
 
 # Secrets
 *secret*
+# Exception: Terraform resource definition files must be committed
+!deploy/aws/company-existing/secrets.tf
 *credential*
 *.password
 *.passwd
@@ -66,6 +68,10 @@ deploy/aws/production/.terraform/
 deploy/aws/production/terraform.tfstate
 deploy/aws/production/terraform.tfstate.backup
 deploy/aws/production/terraform.tfvars
+deploy/aws/company-existing/.terraform/
+deploy/aws/company-existing/terraform.tfstate
+deploy/aws/company-existing/terraform.tfstate.backup
+deploy/aws/company-existing/terraform.tfvars
 
 # Credentials directory (contains API keys and service accounts)
 credentials/
