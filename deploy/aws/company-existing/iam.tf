@@ -35,6 +35,11 @@ resource "aws_iam_role" "ecs_execution" {
   })
 
   tags = local.common_tags
+
+  lifecycle {
+    create_before_destroy = true
+    prevent_destroy       = true
+  }
 }
 
 resource "aws_iam_role_policy" "ecs_execution" {
@@ -121,6 +126,11 @@ resource "aws_iam_role" "ecs_task" {
   })
 
   tags = local.common_tags
+
+  lifecycle {
+    create_before_destroy = true
+    prevent_destroy       = true
+  }
 }
 
 resource "aws_iam_role_policy" "ecs_task" {

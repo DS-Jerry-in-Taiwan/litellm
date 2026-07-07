@@ -60,5 +60,9 @@ locals {
 # ═════════════════════════════════════════════════════════════════════════════
 
 # ═════════════════════════════════════════════════════════════════════════════
-# Phase 4-5: CI/CD hardening (to be added)
+# Phase 4-5: CI/CD hardening
+#   • aws_cloudwatch_metric_alarm.alb_5xx_high              (alarms.tf)
+#   • aws_cloudwatch_metric_alarm.unhealthy_hosts           (alarms.tf)
+#   • aws_cloudwatch_metric_alarm.ecs_cpu_high              (alarms.tf)
+#   • aws_cloudwatch_metric_alarm.ecs_memory_high           (alarms.tf)
 # ═════════════════════════════════════════════════════════════════════════════

@@ -9,6 +9,10 @@ resource "aws_s3_bucket" "config" {
   bucket        = "${local.name_prefix}-config-${data.aws_caller_identity.current.account_id}"
   force_destroy = var.s3_force_destroy
   tags          = local.common_tags
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_s3_bucket_versioning" "config" {
