@@ -149,19 +149,15 @@ variable "alb_health_check_matcher" {
 }
 
 variable "acm_certificate_arn" {
-  description = "ACM certificate ARN for HTTPS listener. REQUIRED for production deployment."
+  description = "ACM certificate ARN for HTTPS listener. Empty string = HTTP-only (requires allow_plaintext_alb=true)"
   type        = string
+  default     = ""
 }
 
 variable "allow_plaintext_alb" {
-  description = "Opt-in to HTTP-only ALB. MUST be false for production."
+  description = "Opt-in to HTTP-only ALB. MUST be false for production. Set true for dev testing without ACM."
   type        = bool
   default     = false
-
-  validation {
-    condition     = var.allow_plaintext_alb == false
-    error_message = "allow_plaintext_alb must be false for production deployment. HTTP-only is not production-safe."
-  }
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
