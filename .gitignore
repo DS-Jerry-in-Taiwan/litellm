@@ -57,7 +57,7 @@ logs/
 
 # Project-specific: docs & opencode (do NOT commit context/task files)
 docs/
-.opencode/
+# .opencode/ — converted to submodule (2026-07-11)
 opencode.json
 
 # Terraform generated artifacts (provider cache, state, variable files)
