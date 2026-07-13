@@ -56,11 +56,17 @@ jobs:
             -var="ecr_repository_arn=arn:aws:ecr:${{ env.AWS_REGION }}:${{ secrets.AWS_ACCOUNT_ID }}:repository/${{ env.ECR_REPOSITORY }}" \
             -auto-approve
 
+      - name: Read ECS cluster and service names
+        id: ecs_info
+        run: |
+          echo "cluster=$(terraform output -raw ecs_cluster_name)" >> $GITHUB_OUTPUT
+          echo "service=$(terraform output -raw ecs_service_name)" >> $GITHUB_OUTPUT
+
       - name: Wait for ECS service stable
         run: |
           aws ecs wait services-stable \
-            --cluster litellm \
-            --services litellm
+            --cluster ${{ steps.ecs_info.outputs.cluster }} \
+            --services ${{ steps.ecs_info.outputs.service }}
 
       - name: Run smoke test
         run: |
