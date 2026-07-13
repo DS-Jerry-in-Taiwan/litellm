@@ -91,11 +91,15 @@ resource "aws_iam_role_policy" "ecs_execution" {
         Action = [
           "secretsmanager:GetSecretValue"
         ]
-        Resource = [
-          aws_secretsmanager_secret.litellm_master_key.arn,
-          aws_secretsmanager_secret.litellm_database_url.arn,
-          aws_secretsmanager_secret.litellm_salt_key.arn,
-        ]
+        Resource = concat(
+          [
+            aws_secretsmanager_secret.litellm_master_key.arn,
+            aws_secretsmanager_secret.litellm_salt_key.arn,
+          ],
+          local.deploy.db_secret ? [
+            aws_secretsmanager_secret.litellm_database_url[0].arn
+          ] : []
+        )
       }
     ]
   })

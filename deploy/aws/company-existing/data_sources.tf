@@ -38,6 +38,7 @@ data "aws_subnet" "private_data" {
 # ─────────────────────────────────────────────────────────────────────────────
 
 data "aws_rds_cluster" "existing" {
+  count              = var.existing_aurora_cluster_identifier != "" ? 1 : 0
   cluster_identifier = var.existing_aurora_cluster_identifier
 }
 

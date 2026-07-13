@@ -19,6 +19,16 @@
 locals {
   name_prefix = "litellm"
   common_tags = var.tags
+
+  # ── ECR Image URI (derived from ARN for ECS task definition) ──
+  account_id    = data.aws_caller_identity.current.account_id
+  ecr_image_uri = "${local.account_id}.dkr.ecr.${var.region}.amazonaws.com/${element(split("/", var.ecr_repository_arn), length(split("/", var.ecr_repository_arn)) - 1)}"
+  ecr_image     = "${local.ecr_image_uri}:${var.image_tag}"
+
+  # ── Bridge Layer — conditional resource flags ──
+  deploy = {
+    db_secret = var.existing_aurora_cluster_identifier != ""
+  }
 }
 
 # ═════════════════════════════════════════════════════════════════════════════
