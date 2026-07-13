@@ -23,7 +23,7 @@ resource "aws_ecs_task_definition" "litellm" {
   container_definitions = jsonencode([
     {
       name  = "litellm"
-      image = "${var.ecr_repository_arn}:${var.image_tag}"
+      image = local.ecr_image
 
       portMappings = [
         {
@@ -109,7 +109,7 @@ resource "aws_ecs_service" "litellm" {
   network_configuration {
     subnets          = var.existing_private_app_subnet_ids
     security_groups  = var.existing_ecs_security_group_id != "" ? [var.existing_ecs_security_group_id] : [aws_security_group.ecs[0].id]
-    assign_public_ip = false
+    assign_public_ip = var.assign_public_ip
   }
 
   load_balancer {

@@ -18,7 +18,7 @@ resource "aws_ecs_task_definition" "migration" {
   container_definitions = jsonencode([
     {
       name  = "litellm-migration"
-      image = "${var.ecr_repository_arn}:${var.image_tag}"
+      image = local.ecr_image
 
       environment = [
         {

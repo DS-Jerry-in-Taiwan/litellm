@@ -148,6 +148,12 @@ variable "alb_health_check_matcher" {
   default     = "200"
 }
 
+variable "assign_public_ip" {
+  description = "Assign public IP to ECS tasks. Set to true when using public subnets without NAT Gateway."
+  type        = bool
+  default     = false
+}
+
 variable "acm_certificate_arn" {
   description = "ACM certificate ARN for HTTPS listener. Empty string = HTTP-only (requires allow_plaintext_alb=true)"
   type        = string
