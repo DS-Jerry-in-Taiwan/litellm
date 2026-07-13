@@ -62,6 +62,13 @@ litellm_settings:
   # num_retries: 3
   # timeout: 60
 
+  # === Model Fallback — primary 不可用時自動切換 ===
+  fallbacks: [
+    {"agent-architect-primary": ["agent-architect-fallback-1", "deepseek-v4-flash"]},
+    {"agent-developer-primary": ["agent-lightweight-primary", "deepseek-v4-flash"]},
+    {"agent-qa-primary": ["agent-lightweight-primary", "deepseek-v4-flash"]}
+  ]
+
 # ---------------------------------------------------------------------------
 # 一般設定 — general_settings
 # ---------------------------------------------------------------------------
@@ -98,4 +105,29 @@ general_settings:
   # === 多組織/多租戶（可選）===
   # store_team_in_db: true
   # default_team_id: "default-team"
+
+# === MCP Servers (via LiteLLM Hub) ===
+mcp_servers:
+  tavily_mcp:
+    url: "https://mcp.tavily.com/mcp/?tavilyApiKey=os.environ/TAVILY_API_KEY"
+    transport: "http"
+    description: "Web search via Tavily"
+  supermemory_mcp:
+    url: "https://mcp.supermemory.ai/mcp"
+    transport: "http"
+    description: "Cross-session memory"
+    static_headers:
+      Authorization: "Bearer os.environ/SUPERMEMORY_API_KEY"
+  github_mcp:
+    url: "http://github-mcp-server:8082"
+    transport: "http"
+    description: "GitHub API"
+    static_headers:
+      Authorization: "Bearer os.environ/GITHUB_TOKEN"
+  brave_search_mcp:
+    url: "http://brave-search-shared:8080/mcp"
+    transport: "http"
+    description: "Web search via Brave"
+    static_headers:
+      Authorization: "Bearer os.environ/BRAVE_SEARCH_API_KEY"
 
