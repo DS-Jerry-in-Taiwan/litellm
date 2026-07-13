@@ -1,0 +1,4 @@
+[submodule ".opencode"]
+	path = .opencode
+	url = git@github.com:DS-Jerry-in-Taiwan/.opencode.git
+	shallow = true
