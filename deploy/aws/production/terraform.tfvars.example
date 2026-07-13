@@ -1,0 +1,29 @@
+# =============================================================================
+# Example terraform.tfvars — 複製為 terraform.tfvars 並填入實際值
+# =============================================================================
+
+# ── AWS 區域 ──────────────────────────────────────────────────────────────
+# 你的 AWS 帳號的預設 region
+region = "us-east-1"
+azs    = ["us-east-1a", "us-east-1b"]
+
+# ── 命名 ──────────────────────────────────────────────────────────────────
+# tenant：組織/公司名稱，會作為所有資源的前綴標籤
+# env：部署環境名稱
+tenant = "mycompany"
+env    = "production"
+
+# ── LiteLLM Master Key ────────────────────────────────────────────────────
+# 這組 key 會存入 AWS Secrets Manager，ECS container 啟動時讀取
+# 不要用舊的 local master key，generate 一組新的
+litellm_master_key = "sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+# ── LiteLLM proxy 設定（選擇性，對應 local config.yaml）───────────────────
+# 可省略，部署後透過 Admin UI 設定即可
+proxy_config = {
+  general_settings = {
+    store_model_in_db  = true
+    enforce_user_param = false
+  }
+}
+

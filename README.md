@@ -2,7 +2,12 @@
 
 ## 概述
 
-本目錄包含 LiteLLM Proxy 的部署範本，供本地 PoC、內網測試及 Production Kubernetes/Helm 部署使用。
+本目錄包含 LiteLLM Proxy 的部署範本，同時支援兩種部署模式：
+
+| 模式 | 適用場景 | 快速開始 |
+|:-----|:---------|:---------|
+| 🏠 **本地部署** | 本機 PoC、內網測試 | `docker compose up -d` |
+| ☁️ **AWS ECS Fargate** | 雲端正式環境、外部可存取 | `terraform apply`（詳見 `docs/arch/`） |
 
 **⚠️ 重要提醒**：這些檔案是**範本，不是 production-ready one-click deploy**。部署前請詳閱本文件所有安全注意事項。
 
@@ -10,13 +15,21 @@
 
 ## 版本變革
 
+### v20260703 — Production-Ready AWS IaC
+- AWS IaC 使用官方 LiteLLM Terraform module（`deploy/aws/production/`），三組件架構（gateway/backend/UI）
+- 新增 UI_PASSWORD / UI_USERNAME 支援（Secrets Manager 管理）
+- 新增 `patch_metrics.py` glob-based path resolver，支援 venv/legacy 雙路徑
+- 新增 `tests/`（單元測試）與 `scripts/`（部署輔助腳本）
+- 新增 `docs/arch/` 架構文件（含部署 Runbook、雲端/地端分離說明）
+- 本地 PoC 操作不變：`docker compose up -d`
+
 ### v20260625-image-parity — Image Parity for AWS-Ready Runtime
 - 新增 `Dockerfile` + `.dockerignore`，以 `docker.litellm.ai/berriai/litellm:main-stable` 為 base image
 - `litellm-entrypoint.sh` + `patch_metrics.py` COPY 至 image `/app/`，不再依賴 compose bind mount
 - `compose.yaml` litellm service 改用 local build (`build: .`) + image tag `litellm-deployment-template:local`
 - **支援 Local Mode / AWS Mode 雙模式部署**：同一 custom image 可用於 local Docker Compose 與未來 AWS ECS Fargate
 - Local Mode：`docker compose up -d`（仍可用，config.yaml 維持 bind mount）
-- AWS Mode：Phase 2 規劃 ECS Fargate + RDS + ElastiCache + Secrets Manager + ALB（本階段未實作）
+- AWS Mode：ECS Fargate + Aurora Postgres + ElastiCache + ALB（官方 Terraform module，deploy/aws/）
 - **驗證方式**：`docker build -t litellm-deployment-template:local .` + `docker compose config`
 
 ### v20260625 — Flat Repository Layout
@@ -53,17 +66,27 @@
 ```
 /
 ├── compose.yaml               # Docker Compose（LiteLLM + PostgreSQL + Redis + Prometheus）
-├── Dockerfile                 # Custom LiteLLM runtime image（Phase 1 image parity）
+├── Dockerfile                 # Custom LiteLLM runtime image
 ├── .dockerignore              # Docker build context 排除清單
 ├── .env.example               # 環境變數範本（複製為 .env）
+├── config.yaml                # LiteLLM 設定檔（UI-managed，model_list: []）
 ├── config.yaml.example        # LiteLLM 設定檔範本
-├── config.yaml                # LiteLLM 設定檔（可從 example 複製）
 ├── litellm-entrypoint.sh      # Entrypoint wrapper（patch metrics → 啟動 proxy）
 ├── patch_metrics.py           # /metrics 路由修補（LiteLLM 1.89.x workaround）
 ├── prometheus.yml             # Prometheus 監控設定
 ├── prometheus-wrapper.sh      # Prometheus env 變數替換 wrapper
 ├── smoke_test.sh              # 健康檢查腳本
 ├── test_user_rpm.sh           # User-level RPM 測試腳本
+├── deploy/
+│   └── aws/
+│       └── production/         # AWS ECS Fargate IaC（官方 Terraform module）
+├── scripts/
+│   ├── aws/                   # AWS 部署輔助腳本
+│   ├── litellm_model_registry.py          # DB-managed credentials/models 重建腳本
+│   └── litellm_model_registry.env.example # provider key 範本（不含真實 secrets）
+├── tests/                     # 單元測試
+├── docs/
+│   └── arch/                  # 架構文件與部署 Runbook
 ├── helm/
 │   └── values.yaml.example    # Kubernetes Helm values 範本
 └── README.md                  # 本文件
@@ -142,6 +165,81 @@ RUN_CHAT_TEST=true ./smoke_test.sh
 # 含 Virtual Key 建立測試（需要 master key）
 RUN_KEY_TEST=true ./smoke_test.sh
 ```
+
+---
+
+## AWS ECS Fargate 部署
+
+適用於雲端正式環境。完整 IaC 與部署步驟記錄於架構文件：
+
+| 文件 | 說明 |
+|:-----|:------|
+| [`docs/arch/litellm_current_architecture.md`](docs/arch/litellm_current_architecture.md) | 架構概覽、雲端/地端部署 Runbook |
+| `deploy/aws/production/` | AWS IaC（官方 LiteLLM Terraform module） |
+
+### 一鍵式自動部署
+
+```bash
+The official Terraform module handles provisioning automatically. See `deploy/aws/` for details.
+```
+
+### 每次部署仍需手動的 3 個步驟
+
+| # | 步驟 | 用途 |
+|:-:|:-----|:-----|
+| 1 | `aws secretsmanager put-secret-value` | 填入 5 個 Secrets（DATABASE_URL / MASTER_KEY / SALT_KEY / UI_PASSWORD / REDIS_PASSWORD） |
+| 2 | `docker build && docker push` | Build & Push ECR Image |
+| 3 | Admin UI 登入 | 新增模型至 LiteLLM |
+
+> 詳細指令與注意事項請見 `docs/arch/litellm_current_architecture.md`。
+
+### DB-managed credentials / models 重建腳本
+
+本 repo 的 active `config.yaml` 使用 `model_list: []` + `store_model_in_db: true`，因此 provider credentials 與 model aliases 需透過 LiteLLM Admin API/UI 建立。為了在重新搬遷、DB reset、或 provider key rotation 後快速恢復，目前集中由：
+
+```bash
+scripts/litellm_model_registry.py
+```
+
+管理以下 aliases：
+
+| LiteLLM model alias | Provider route | Credential | API base |
+|:--|:--|:--|:--|
+| `moonshotai-cn/kimi-k2.5` | `moonshot/kimi-k2.5` | `moonshot-kimi` | `https://api.moonshot.cn/v1` |
+| `opencode-go/minimax-m2.7` | `openai/minimax-m2.7` | `opencode-go` | `https://opencode.ai/zen/go/v1` |
+| `opencode/deepseek-v4-flash-free` | `openai/deepseek-v4-flash-free` | `opencode-go` | `https://opencode.ai/zen/v1` |
+| `anthropic/claude-sonnet-4-6` | `anthropic/claude-sonnet-4-6` | `anthropic-claude` | provider default |
+| `agent-architect-primary` | `anthropic/claude-sonnet-4-6` | `anthropic-claude` | provider default |
+| `agent-architect-fallback-1` | `moonshot/kimi-k2.5` | `moonshot-kimi` | `https://api.moonshot.cn/v1` |
+| `agent-developer-primary` | `openai/minimax-m2.7` | `opencode-go` | `https://opencode.ai/zen/go/v1` |
+| `agent-qa-primary` | `openai/deepseek-v4-flash-free` | `opencode-go` | `https://opencode.ai/zen/v1` |
+| `agent-lightweight-primary` | `openai/deepseek-v4-flash-free` | `opencode-go` | `https://opencode.ai/zen/v1` |
+
+使用方式：
+
+```bash
+cp scripts/litellm_model_registry.env.example .env.model_registry.tmp
+chmod 600 .env.model_registry.tmp
+# 編輯 .env.model_registry.tmp，填入 LITELLM_MASTER_KEY 與 provider API keys
+
+# 預覽會 create/update 哪些項目（不寫入）
+python3 scripts/litellm_model_registry.py --env-file .env.model_registry.tmp --dry-run
+
+# 建立/更新 credentials + models，並做 chat smoke test
+python3 scripts/litellm_model_registry.py --env-file .env.model_registry.tmp --smoke
+
+# 單一 provider key rotation 範例：只更新 Anthropic credential
+python3 scripts/litellm_model_registry.py --env-file .env.model_registry.tmp \
+  --credentials-only --credential anthropic-claude
+
+rm -f .env.model_registry.tmp
+```
+
+安全注意事項：
+
+- 不要 commit `.env.model_registry.tmp` 或任何真實 provider key。
+- OpenCode Go 與 OpenCode Zen 目前共用 `OPENCODE_API_KEY`，只在 model alias 的 `api_base` 不同。
+- OpenAI ChatGPT/GPT account 登入不是 OpenAI Platform API key，不能直接作為 LiteLLM credential。
 
 ---
 
