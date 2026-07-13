@@ -23,7 +23,7 @@ resource "aws_ecs_task_definition" "litellm" {
   container_definitions = jsonencode([
     {
       name  = "litellm"
-      image = "${var.ecr_repository_arn}:${var.image_tag}"
+      image = local.ecr_image
 
       portMappings = [
         {
@@ -39,20 +39,24 @@ resource "aws_ecs_task_definition" "litellm" {
         }
       ]
 
-      secrets = [
-        {
-          name      = "LITELLM_MASTER_KEY"
-          valueFrom = aws_secretsmanager_secret.litellm_master_key.arn
-        },
-        {
-          name      = "DATABASE_URL"
-          valueFrom = aws_secretsmanager_secret.litellm_database_url.arn
-        },
-        {
-          name      = "LITELLM_SALT_KEY"
-          valueFrom = aws_secretsmanager_secret.litellm_salt_key.arn
-        }
-      ]
+      secrets = concat(
+        [
+          {
+            name      = "LITELLM_MASTER_KEY"
+            valueFrom = aws_secretsmanager_secret.litellm_master_key.arn
+          },
+          {
+            name      = "LITELLM_SALT_KEY"
+            valueFrom = aws_secretsmanager_secret.litellm_salt_key.arn
+          },
+        ],
+        local.deploy.db_secret ? [
+          {
+            name      = "DATABASE_URL"
+            valueFrom = aws_secretsmanager_secret.litellm_database_url[0].arn
+          }
+        ] : []
+      )
 
       logConfiguration = {
         logDriver = "awslogs"
@@ -105,7 +109,7 @@ resource "aws_ecs_service" "litellm" {
   network_configuration {
     subnets          = var.existing_private_app_subnet_ids
     security_groups  = var.existing_ecs_security_group_id != "" ? [var.existing_ecs_security_group_id] : [aws_security_group.ecs[0].id]
-    assign_public_ip = false
+    assign_public_ip = var.assign_public_ip
   }
 
   load_balancer {

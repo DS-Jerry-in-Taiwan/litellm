@@ -18,7 +18,7 @@ resource "aws_ecs_task_definition" "migration" {
   container_definitions = jsonencode([
     {
       name  = "litellm-migration"
-      image = "${var.ecr_repository_arn}:${var.image_tag}"
+      image = local.ecr_image
 
       environment = [
         {
@@ -31,20 +31,24 @@ resource "aws_ecs_task_definition" "migration" {
         }
       ]
 
-      secrets = [
-        {
-          name      = "LITELLM_MASTER_KEY"
-          valueFrom = aws_secretsmanager_secret.litellm_master_key.arn
-        },
-        {
-          name      = "DATABASE_URL"
-          valueFrom = aws_secretsmanager_secret.litellm_database_url.arn
-        },
-        {
-          name      = "LITELLM_SALT_KEY"
-          valueFrom = aws_secretsmanager_secret.litellm_salt_key.arn
-        }
-      ]
+      secrets = concat(
+        [
+          {
+            name      = "LITELLM_MASTER_KEY"
+            valueFrom = aws_secretsmanager_secret.litellm_master_key.arn
+          },
+          {
+            name      = "LITELLM_SALT_KEY"
+            valueFrom = aws_secretsmanager_secret.litellm_salt_key.arn
+          },
+        ],
+        local.deploy.db_secret ? [
+          {
+            name      = "DATABASE_URL"
+            valueFrom = aws_secretsmanager_secret.litellm_database_url[0].arn
+          }
+        ] : []
+      )
 
       logConfiguration = {
         logDriver = "awslogs"
