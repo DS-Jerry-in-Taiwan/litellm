@@ -130,4 +130,16 @@ mcp_servers:
     description: "Web search via Brave"
     static_headers:
       Authorization: "Bearer os.environ/BRAVE_SEARCH_API_KEY"
+  # ── Phase E: Codebase Memory MCP ───────────────────────────────────────────────
+  # Local stdio MCP server for codebase graph indexing and query.
+  # Bounded by CBM_ALLOWED_ROOT=/workspace/litellm (compose env) and .cbmignore.
+  # No external API key required.
+  codebase_memory_mcp:
+    command: "/usr/local/bin/codebase-memory-mcp"
+    transport: "stdio"
+    description: "Local codebase graph memory for /workspace/litellm"
+    env:
+      CBM_ALLOWED_ROOT: "/workspace/litellm"
+      CBM_CACHE_DIR: "/data/codebase-memory"
+      CBM_LOG_LEVEL: "warn"
 

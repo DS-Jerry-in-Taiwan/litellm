@@ -26,6 +26,12 @@ services:
       # config.yaml 保留 bind mount：本地修改不需 rebuild，符合 local dev 需求
       # AWS ECS 可選擇：Phase 2 時將 config COPY 進 image 或透過 Secrets/SSM 注入
       - ./config.yaml:/app/config.yaml:ro
+      # ── Phase E: Codebase Memory MCP ──────────────────────────────────────────
+      # 掛載專案程式碼唯讀（避免 CBM 意外寫入）
+      # CBM_ALLOWED_ROOT=/workspace/litellm 由 compose env 注入
+      - ./:/workspace/litellm:ro
+      # CBM cache/SQLite graph 寫入專用 volume（與 repo 隔離）
+      - codebase_memory_cache:/data/codebase-memory
     # entrypoint / command 不在此設定；由 Dockerfile ENTRYPOINT / CMD 提供
     # litellm-entrypoint.sh + patch_metrics.py 已在 image 內 /app/
     env_file:
@@ -45,6 +51,19 @@ services:
       - CONFIG_FILE_PATH=/app/config.yaml
       # 啟用 DB 儲存 model 設定（允許 Admin UI 動態新增 model）
       - STORE_MODEL_IN_DB=${STORE_MODEL_IN_DB:-True}
+      # === MCP Server credentials（optional; keep actual values in .env only） ===
+      - TAVILY_API_KEY=${TAVILY_API_KEY:-}
+      - SUPERMEMORY_API_KEY=${SUPERMEMORY_API_KEY:-}
+      - BRAVE_API_KEY=${BRAVE_API_KEY:-}
+      - GITHUB_PERSONAL_ACCESS_TOKEN=${GITHUB_PERSONAL_ACCESS_TOKEN:-}
+      # ── Phase E: Codebase Memory MCP ────────────────────────────────────────────
+      # Bounded to /workspace/litellm (repo mount) — no external API key needed
+      - CBM_ALLOWED_ROOT=/workspace/litellm
+      - CBM_CACHE_DIR=/data/codebase-memory
+      - CBM_LOG_LEVEL=${CBM_LOG_LEVEL:-warn}
+      # Allowlist the local Codebase Memory MCP binary for LiteLLM stdio transport.
+      # LiteLLM blocks arbitrary stdio commands by default for RCE protection.
+      - LITELLM_MCP_STDIO_EXTRA_COMMANDS=codebase-memory-mcp
     depends_on:
       postgres:
         condition: service_healthy
@@ -155,3 +174,8 @@ volumes:
   prometheus_data:
     driver: local
   # redis_data:                        # 可選：Redis 持久化 cache
+  # ── Phase E: Codebase Memory MCP ──────────────────────────────────────────────
+  # Writable named volume for CBM SQLite graph / cache
+  # CBM writes only to /data/codebase-memory (see CBM_CACHE_DIR env var)
+  codebase_memory_cache:
+    driver: local
