@@ -136,6 +136,50 @@ services:
     #   - redis_data:/data            # 可選：持久化 Redis cache
 
   # ---------------------------------------------------------------------------
+  # Playwright MCP Sidecar — HTTP MCP service with bundled browser
+  # ---------------------------------------------------------------------------
+  # Purpose: Provides Playwright-based browser automation to LiteLLM via HTTP SSE.
+  # Image: mcr.microsoft.com/playwright/mcp (official Microsoft Playwright MCP)
+  # Transport: SSE/Streamable HTTP on internal port 8931, path /mcp
+  # Policy: read-only browser observations = ALLOW_READ; interactions/upload/evaluate/tabs = ASK
+  # Security: No Docker socket, no repo mount, no secrets mount.
+  #           Playwright MCP is NOT a security boundary; restrict client access.
+  # ---------------------------------------------------------------------------
+  playwright-mcp-server:
+    image: mcr.microsoft.com/playwright/mcp
+    container_name: playwright-mcp-server
+    # Override entrypoint: the Dockerfile default is stdio mode.
+    # We need node /app/cli.js for HTTP/SSE server mode.
+    entrypoint: ["node", "/app/cli.js"]
+    # Start headless Chromium with HTTP SSE transport on port 8931, binding all interfaces.
+    command:
+      - "--headless"
+      - "--browser"
+      - "chromium"
+      - "--no-sandbox"
+      - "--port"
+      - "8931"
+      - "--host"
+      - "0.0.0.0"
+    # --init equivalent for proper signal handling
+    init: true
+    # Always pull to get latest browser and security fixes
+    pull_policy: always
+    # No host port exposed: only LiteLLM connects internally via Docker network.
+    # Expose host port only if explicitly approved for local debugging.
+    # ports:
+    #   - "8931:8931"
+    healthcheck:
+      test: ["CMD", "node", "-e", "process.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - litellm-network
+
+  # ---------------------------------------------------------------------------
   # Prometheus（可選）— 用於 metrics 收集
   # ---------------------------------------------------------------------------
   prometheus:
