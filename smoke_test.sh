@@ -29,6 +29,7 @@ LITELLM_API_KEY="${LITELLM_API_KEY:-${LITELLM_MASTER_KEY:-sk-change-me-replace-b
 
 RUN_CHAT_TEST="${RUN_CHAT_TEST:-false}"
 RUN_KEY_TEST="${RUN_KEY_TEST:-false}"
+RUN_PLAYWRIGHT_MCP_TEST="${RUN_PLAYWRIGHT_MCP_TEST:-false}"
 
 # 顏色輸出
 RED='\033[0;31m'
@@ -228,6 +229,101 @@ test_virtual_key() {
     return 0
 }
 
+# ── Playwright MCP Sidecar Smoke Test ──────────────────────────────────────
+# Tests the Playwright MCP sidecar reachability from LiteLLM.
+# Gated by RUN_PLAYWRIGHT_MCP_TEST=true — does not run by default.
+# The sidecar uses Docker Compose profile "browser-mcp" and must be running.
+# ---------------------------------------------------------------------------
+test_playwright_mcp() {
+    log_info "Testing Playwright MCP sidecar reachability..."
+
+    if [[ "$RUN_PLAYWRIGHT_MCP_TEST" != "true" ]]; then
+        log_warn "RUN_PLAYWRIGHT_MCP_TEST != true, skipping Playwright MCP test"
+        return 0
+    fi
+
+    # Step 1: Check if the sidecar container exists and is running
+    local pw_container_status
+    if command -v docker &>/dev/null; then
+        pw_container_status=$(docker inspect playwright-mcp-server \
+            --format '{{.State.Status}}' 2>/dev/null || echo "not_found")
+        if [[ "$pw_container_status" == "not_found" ]]; then
+            log_error "Playwright MCP sidecar container 'playwright-mcp-server' not found."
+            log_error "The sidecar is profile-gated (browser-mcp). Start with:"
+            log_error "  docker compose --profile browser-mcp up -d"
+            return 1
+        fi
+        if [[ "$pw_container_status" != "running" ]]; then
+            log_error "Playwright MCP sidecar container is '$pw_container_status' (expected 'running')."
+            return 1
+        fi
+        log_info "Sidecar container status: running"
+    else
+        log_warn "docker not available — skipping container status check"
+    fi
+
+    # Step 2: Check LiteLLM MCP health endpoint for playwright_mcp status
+    # Requires LITELLM_API_KEY (master key) to be set.
+    local api_key="${LITELLM_API_KEY}"
+    if [[ "${api_key}" == "sk-change-me-replace-before-use" ]]; then
+        log_warn "LITELLM_API_KEY is placeholder — cannot query MCP health endpoint"
+        log_warn "Skipping MCP health check for playwright_mcp"
+        return 0
+    fi
+
+    local health_response
+    local http_code
+    health_response=$(curl -s --max-time 10 \
+        -w "\n%{http_code}" \
+        -H "Authorization: Bearer ${api_key}" \
+        "${LITELLM_BASE_URL}/v1/mcp/server/health" 2>/dev/null || echo "__CURL_FAILED__")
+
+    if [[ "$health_response" == "__CURL_FAILED__" ]]; then
+        log_error "Could not reach ${LITELLM_BASE_URL}/v1/mcp/server/health"
+        log_error "Ensure LiteLLM is running and reachable."
+        return 1
+    fi
+
+    http_code=$(echo "$health_response" | tail -n1)
+    local response_body
+    response_body=$(echo "$health_response" | sed '$d')
+
+    if [[ "$http_code" != "200" ]]; then
+        log_warn "MCP health endpoint returned HTTP ${http_code} (expected 200)"
+        log_warn "Playwright MCP sidecar may not be registered yet."
+        return 0
+    fi
+
+    # Parse the response for playwright_mcp status (no secrets printed)
+    if command -v jq &>/dev/null; then
+        local pw_status
+        pw_status=$(echo "$response_body" | jq -r '
+            (.mcp_servers // .servers // . | .. | objects |
+             select(.url // .command // empty) |
+             if (.url // "") | test("playwright") then .status // "unknown" else empty end)
+            // "not_found"' 2>/dev/null)
+        if [[ -z "$pw_status" || "$pw_status" == "not_found" ]]; then
+            # Try simpler path: direct key lookup in objects
+            pw_status=$(echo "$response_body" | jq -r '
+                (.. | objects | select(.description? // "" | test("Playwright")) | .status)
+                // "not_found"' 2>/dev/null)
+        fi
+        log_info "Playwright MCP health status: ${pw_status}"
+        if [[ "$pw_status" == "healthy" || "$pw_status" == "connected" ]]; then
+            log_info "Playwright MCP sidecar is connected and healthy."
+        elif [[ "$pw_status" == "not_found" ]]; then
+            log_warn "playwright_mcp not found in MCP health response."
+            log_warn "This is expected if the sidecar profile is not running."
+        else
+            log_warn "Playwright MCP status is '${pw_status}' (may be expected if sidecar profile is not running)"
+        fi
+    else
+        log_info "MCP health endpoint HTTP 200 (jq not available, skipping parse)"
+    fi
+
+    return 0
+}
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Main
 # ─────────────────────────────────────────────────────────────────────────────
@@ -240,6 +336,7 @@ main() {
     echo "API Key:    ${LITELLM_API_KEY:0:8}..."
     echo "Chat Test:  ${RUN_CHAT_TEST}"
     echo "Key Test:   ${RUN_KEY_TEST}"
+    echo "Playwright MCP Test:  ${RUN_PLAYWRIGHT_MCP_TEST}"
     echo "============================================"
 
     # ── 如果 LITELLM_API_KEY 還是 placeholder，發出警告 ─────────
@@ -266,6 +363,12 @@ main() {
     # 3. Virtual key generation
     if ! test_virtual_key; then
         log_error "Virtual key test FAILED"
+        failed=1
+    fi
+
+    # 4. Playwright MCP sidecar (opt-in, needs running sidecar profile)
+    if ! test_playwright_mcp; then
+        log_error "Playwright MCP test FAILED"
         failed=1
     fi
 

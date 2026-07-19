@@ -143,6 +143,10 @@ mcp_servers:
   # HTTP sidecar service for browser automation using Playwright.
   # Communicates via Docker network to playwright-mcp-server:8931.
   # Transport: SSE/Streamable HTTP at /mcp endpoint.
+  # Runtime requirement: the sidecar is profile-gated (browser-mcp).
+  #   Start with: docker compose --profile browser-mcp up -d
+  #   If the sidecar profile is not running, MCP health will report playwright_mcp as unhealthy
+  #   but LiteLLM itself stays operational.
   # No API key required.
   # Policy: read-only browser observations = ALLOW_READ; interactions/evaluate/upload/tabs = ASK
   playwright_mcp:
