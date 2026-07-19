@@ -116,20 +116,25 @@ mcp_servers:
     url: "https://mcp.supermemory.ai/mcp"
     transport: "http"
     description: "Cross-session memory"
-    static_headers:
-      Authorization: "Bearer os.environ/SUPERMEMORY_API_KEY"
-  github_mcp:
-    url: "http://github-mcp-server:8082"
-    transport: "http"
-    description: "GitHub API"
-    static_headers:
-      Authorization: "Bearer os.environ/GITHUB_TOKEN"
+    auth_type: "bearer_token"
+    auth_value: os.environ/SUPERMEMORY_API_KEY
+  # github_mcp is intentionally fully disabled (G0).
+  # Reason: current github-mcp-server is not reachable from litellm-proxy and
+  # does not expose a verified HTTP/streamable HTTP endpoint for LiteLLM Hub.
+  # Re-enable only after adding a verified HTTP MCP service and confirming DNS
+  # from litellm-proxy.
+  # github_mcp:
+  #   url: "http://github-mcp-server:8082/mcp"
+  #   transport: "http"
+  #   description: "GitHub API"
+  #   static_headers:
+  #     Authorization: "Bearer os.environ/GITHUB_PERSONAL_ACCESS_TOKEN"
   brave_search_mcp:
     url: "http://brave-search-shared:8080/mcp"
     transport: "http"
-    description: "Web search via Brave"
+    description: "Web search via Brave (requires brave-search-shared container in litellm-network)"
     static_headers:
-      Authorization: "Bearer os.environ/BRAVE_SEARCH_API_KEY"
+      Authorization: "Bearer os.environ/BRAVE_API_KEY"
   # ── Phase E: Codebase Memory MCP ───────────────────────────────────────────────
   # Local stdio MCP server for codebase graph indexing and query.
   # Bounded by CBM_ALLOWED_ROOT=/workspace/litellm (compose env) and .cbmignore.
