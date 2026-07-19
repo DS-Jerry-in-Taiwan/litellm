@@ -64,9 +64,13 @@ litellm_settings:
 
   # === Model Fallback — primary 不可用時自動切換 ===
   fallbacks: [
-    {"agent-architect-primary": ["agent-architect-fallback-1", "deepseek-v4-flash"]},
-    {"agent-developer-primary": ["agent-lightweight-primary", "deepseek-v4-flash"]},
-    {"agent-qa-primary": ["agent-lightweight-primary", "deepseek-v4-flash"]}
+    {"agent-architect-primary": ["agent-architect-fallback", "deepseek-v4-flash"]},
+    {"agent-developer-primary": ["agent-developer-fallback", "deepseek-v4-flash"]},
+    {"agent-qa-primary": ["agent-qa-fallback", "deepseek-v4-flash"]},
+    {"agent-expert-primary": ["agent-expert-fallback", "deepseek-v4-flash"]},
+    {"agent-releaser-primary": ["agent-releaser-fallback", "deepseek-v4-flash"]},
+    {"agent-debugger-primary": ["agent-qa-primary", "deepseek-v4-flash"]},
+    {"agent-designer-primary": ["agent-qa-primary", "deepseek-v4-flash"]}
   ]
 
 # ---------------------------------------------------------------------------
