@@ -1,0 +1,103 @@
+# =============================================================================
+# Example office-mfa.tfvars — Office MFA AWS Environment
+# =============================================================================
+# Copy this file to office-mfa.tfvars and fill real values locally.
+# DO NOT commit office-mfa.tfvars. It is ignored by .gitignore.
+# Never store AWS access keys, secret access keys, or session tokens here.
+# =============================================================================
+
+region = "ap-northeast-1"
+
+tags = {
+  Project     = "LiteLLM"
+  Environment = "office-mfa"
+  ManagedBy   = "Terraform"
+}
+
+# Existing VPC / Subnets
+existing_vpc_id                  = "vpc-xxxxxxxxxxxxxxxxx"
+existing_private_app_subnet_ids  = ["subnet-xxxxxxxxxxxxxxxxx", "subnet-yyyyyyyyyyyyyyyyy"]
+existing_private_data_subnet_ids = ["subnet-xxxxxxxxxxxxxxxxx", "subnet-yyyyyyyyyyyyyyyyy"]
+
+# Optional existing security groups. Leave empty to let Terraform create LiteLLM ECS SG.
+# NOTE: existing_ecs_security_group_id should stay empty until sg.tf conditional references are hardened.
+existing_ecs_security_group_id  = ""
+existing_data_security_group_id = ""
+
+# Existing Aurora PostgreSQL. Set to "" only for DB-free dev testing.
+existing_aurora_cluster_identifier = "aurora-postgre01"
+db_name                            = "litellm"
+
+# Container image
+image_tag = "<immutable-commit-sha-or-version>"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ECR — Terraform-managed ECR (Phase 3)
+# ─────────────────────────────────────────────────────────────────────────────
+# create_ecr_repository=true: Terraform creates the ECR repo; ecr_repository_arn is not required.
+# create_ecr_repository=false: Use existing external ECR; must provide ecr_repository_arn.
+# ─────────────────────────────────────────────────────────────────────────────
+create_ecr_repository    = true
+ecr_repository_name      = "litellm"
+ecr_image_tag_mutability = "IMMUTABLE"
+ecr_force_delete         = false
+# ecr_repository_arn is not required when create_ecr_repository=true
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Redis / ElastiCache — Terraform-managed Redis (Phase 3)
+# ─────────────────────────────────────────────────────────────────────────────
+# create_redis=true: Terraform creates ElastiCache Redis in private data subnets.
+# create_redis=false: Use external Redis; provide redis_host (ensure ECS can reach it on redis_port).
+# NOTE: redis_auth_enabled is locked to false in Phase 3 to avoid secrets in Terraform state.
+#       Future Redis AUTH requires a dedicated Secrets Manager AUTH phase.
+# ─────────────────────────────────────────────────────────────────────────────
+create_redis             = true
+redis_node_type          = "cache.t3.micro"
+redis_num_cache_clusters = 1
+redis_port               = 6379
+redis_auth_enabled       = false
+redis_host               = ""
+# If create_redis=false and an external Redis/existing data SG is used,
+# ensure ECS security group can reach Redis on redis_port (default 6379).
+
+# ECS sizing
+container_port    = 4000
+ecs_task_cpu      = 1024
+ecs_task_memory   = 2048
+ecs_desired_count = 2
+ecs_min_capacity  = 1
+ecs_max_capacity  = 4
+
+# ALB / Networking
+alb_name                 = "litellm-office-mfa-alb"
+alb_health_check_path    = "/health/liveliness"
+alb_health_check_matcher = "200"
+assign_public_ip         = false
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TLS — HTTP-only for deployment validation only
+# ─────────────────────────────────────────────────────────────────────────────
+# allow_plaintext_alb=true: HTTP-only for office-mfa deployment validation.
+# Production deployments MUST use HTTPS with a valid ACM certificate ARN.
+# ─────────────────────────────────────────────────────────────────────────────
+acm_certificate_arn = ""
+allow_plaintext_alb = true
+
+# Destroy safety
+skip_final_snapshot = false
+s3_force_destroy    = false
+
+# Runtime config upload. Path is relative to deploy/aws/company-existing when running Terraform.
+proxy_config_source = "../../../config.yaml"
+# proxy_config = {} # Phase 3: optional YAML config map override; normally leave default.
+
+# LiteLLM secrets — placeholders only. Fill real values in local office-mfa.tfvars.
+litellm_master_key = "<generate-locally-do-not-commit>"
+litellm_salt_key   = "<generate-locally-do-not-commit>"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# LiteLLM Admin UI credentials for office-mfa dev validation.
+# User-requested default: admin/admin. Production MUST override these values.
+# ─────────────────────────────────────────────────────────────────────────────
+ui_username = "admin"
+ui_password = "admin"
