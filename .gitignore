@@ -22,6 +22,15 @@
 # Exception: Terraform resource definition files must be committed
 !deploy/aws/company-existing/secrets.tf
 *credential*
+# prebuilt/ — binary artifacts for Phase F1 MCP servers
+prebuilt/
+# Exception: track pre-built artifact and build documentation for Docker reproducibility
+# Git requires unignoring the directory (!prebuilt/) before file exceptions will be checked.
+# Then re-ignore with prebuilt/*, and finally whitelist specific files.
+!prebuilt/
+prebuilt/*
+!prebuilt/seqthink-server.tgz
+!prebuilt/BUILD.md
 *.password
 *.passwd
 
