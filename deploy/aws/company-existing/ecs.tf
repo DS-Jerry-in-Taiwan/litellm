@@ -36,6 +36,30 @@ resource "aws_ecs_task_definition" "litellm" {
         {
           name  = "S3_CONFIG_URL"
           value = "s3://${aws_s3_bucket.config.id}/config.yaml"
+        },
+        {
+          name  = "STORE_MODEL_IN_DB"
+          value = var.store_model_in_db
+        },
+        {
+          name  = "UI_USERNAME"
+          value = var.ui_username
+        },
+        {
+          name  = "UI_PASSWORD"
+          value = var.ui_password
+        },
+        {
+          name  = "REDIS_HOST"
+          value = local.redis_host
+        },
+        {
+          name  = "REDIS_PORT"
+          value = tostring(var.redis_port)
+        },
+        {
+          name  = "REDIS_PASSWORD"
+          value = ""
         }
       ]
 
@@ -105,6 +129,11 @@ resource "aws_ecs_service" "litellm" {
 
   # Force new deployment when S3 config etag changes
   force_new_deployment = var.proxy_config_source != "" ? true : null
+
+  deployment_circuit_breaker {
+    enable   = var.ecs_deployment_circuit_breaker_enable
+    rollback = var.ecs_deployment_circuit_breaker_rollback
+  }
 
   network_configuration {
     subnets          = var.existing_private_app_subnet_ids

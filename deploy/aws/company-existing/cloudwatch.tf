@@ -14,7 +14,6 @@ resource "aws_cloudwatch_log_group" "ecs" {
   retention_in_days = 30
   tags              = local.common_tags
 
-  lifecycle {
-    prevent_destroy = true
-  }
+  # prevent_destroy removed for dev stack cleanup
+  # lifecycle { prevent_destroy = true }
 }
