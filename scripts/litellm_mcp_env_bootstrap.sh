@@ -31,10 +31,12 @@ MCP_VAR_NAMES=(
 # LiteLLM MCP server names (matching config.yaml keys)
 # ── Phase E: codebase_memory_mcp added (no API key required) ──────────────────
 # ── Phase F1: sequentialthinking_mcp added (no API key required) ───────────────
+# ── Phase F2a: playwright_mcp added (HTTP sidecar, no API key required) ────────
 MCP_SERVER_NAMES=(
   "tavily_mcp"
   "supermemory_mcp"
   "brave_search_mcp"
+  "playwright_mcp"
   "codebase_memory_mcp"
   "sequentialthinking_mcp"
   "github_mcp"
