@@ -147,6 +147,18 @@ services:
   # Profile: "browser-mcp" — opt-in; start with:
   #   docker compose --profile browser-mcp up -d
   # ---------------------------------------------------------------------------
+  # ---------------------------------------------------------------------------
+  # Playwright MCP Sidecar — HTTP MCP service with bundled browser
+  # ---------------------------------------------------------------------------
+  # Purpose: Provides Playwright-based browser automation to LiteLLM via HTTP SSE.
+  # Image: mcr.microsoft.com/playwright/mcp (official Microsoft Playwright MCP)
+  # Transport: SSE/Streamable HTTP on internal port 8931, path /mcp
+  # Policy: read-only browser observations = ALLOW_READ; interactions/upload/evaluate/tabs = ASK
+  # Security: No Docker socket, no repo mount, no secrets mount.
+  #           Playwright MCP is NOT a security boundary; restrict client access.
+  # Profile: "browser-mcp" — opt-in; start with:
+  #   docker compose --profile browser-mcp up -d
+  # ---------------------------------------------------------------------------
   playwright-mcp-server:
     profiles: ["browser-mcp"]
     # Pin to v0.0.78 by digest for reproducibility. See also:
@@ -173,6 +185,48 @@ services:
     # Expose host port only if explicitly approved for local debugging.
     # ports:
     #   - "8931:8931"
+    healthcheck:
+      test: ["CMD", "node", "-e", "process.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - litellm-network
+
+  # ---------------------------------------------------------------------------
+  # Mermaid MCP Sidecar — HTTP MCP service for diagram generation
+  # ---------------------------------------------------------------------------
+  # Purpose: Provides Mermaid diagram/chart generation to LiteLLM via HTTP SSE.
+  # Image: susuperli/mcp-mermaid (community image wrapping hustcc/mcp-mermaid)
+  # Source: https://github.com/hustcc/mcp-mermaid (MIT) via Docker Hub
+  # Transport: Streamable HTTP on internal port 1122, path /mcp
+  # Security: No Docker socket, no repo mount, no secrets mount.
+  # Profile: "browser-mcp" — opt-in alongside Playwright sidecar; start with:
+  #   docker compose --profile browser-mcp up -d
+  # Note: Image bundles Chromium (~549MB pinned digest). Supply-chain awareness
+  #       recommended. Pin to v0.2.3 tag by SHA256 for reproducibility.
+  # ---------------------------------------------------------------------------
+  mermaid-mcp-server:
+    profiles: ["browser-mcp"]
+    # Pinned to multi-arch index digest for v0.2.3 tag (2025-10-11).
+    # Multi-arch index (covers amd64 + arm64):
+    #   sha256:9e0c15c60fc79d15a856ae9260a58578e17e4edb30dc966cdf6153d8057cab4d
+    # Platform digests for verification:
+    #   amd64: sha256:8f1217b11502db25c34b05633bf9e338764f99724536ef5e3e49541a73e853c1
+    #   arm64: sha256:1dd8cfc69ff7e2efe77dc5bf1e0cfbede8e9cb8a041f1315a600c2658b6cca6d
+    image: susuperli/mcp-mermaid:0.2.3@sha256:9e0c15c60fc79d15a856ae9260a58578e17e4edb30dc966cdf6153d8057cab4d
+    container_name: mermaid-mcp-server
+    # Force streamable HTTP mode on internal port 1122.
+    # No --host flag: the MCP SDK binds to 0.0.0.0 by default for HTTP transport.
+    command:
+      - "--transport"
+      - "streamable"
+      - "--port"
+      - "1122"
+    init: true
+    # Healthcheck: mirror Node process check (no real HTTP probe verified in image).
     healthcheck:
       test: ["CMD", "node", "-e", "process.exit(0)"]
       interval: 30s

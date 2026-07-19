@@ -153,6 +153,19 @@ mcp_servers:
     url: "http://playwright-mcp-server:8931/mcp"
     transport: "http"
     description: "Browser automation via Playwright MCP sidecar"
+  # ── Track C: Mermaid MCP Sidecar ───────────────────────────────────────────────
+  # HTTP sidecar service for Mermaid diagram generation.
+  # Communicates via Docker network to mermaid-mcp-server:1122.
+  # Transport: Streamable HTTP at /mcp endpoint.
+  # Runtime requirement: the sidecar is profile-gated (browser-mcp).
+  #   Start with: docker compose --profile browser-mcp up -d
+  #   If the sidecar profile is not running, MCP health will report mermaid_mcp as unhealthy
+  #   but LiteLLM itself stays operational.
+  # No API key required.
+  mermaid_mcp:
+    url: "http://mermaid-mcp-server:1122/mcp"
+    transport: "http"
+    description: "Mermaid diagram generation via Mermaid MCP sidecar (requires browser-mcp profile)"
   # ── Phase E: Codebase Memory MCP ───────────────────────────────────────────────
   # Local stdio MCP server for codebase graph indexing and query.
   # Bounded by CBM_ALLOWED_ROOT=/workspace/litellm (compose env) and .cbmignore.
