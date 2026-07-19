@@ -45,6 +45,42 @@ RUN \
     # Cleanup build artifacts
     rm -f /tmp/checksums.txt /tmp/cbm.tar.gz
 
+# ── Phase F1: Sequential Thinking MCP ─────────────────────────────────────────
+# Install @modelcontextprotocol/server-sequential-thinking as a pre-bundled
+# self-contained executable. No npm/node_modules required at runtime.
+#
+# Build strategy (done locally, outside Docker — see prebuilt/BUILD.md):
+#   1. Download npm tarball from registry.npmjs.org
+#   2. Extract and npm install --omit=dev (with local npm available)
+#   3. Bundle via esbuild (format=cjs, external=node:*) to single CJS file
+#   4. Collect required runtime deps (ajv sub-modules) into node_modules/
+#   5. Package as tar.gz: mcp-server/{mcp-server-sequential-thinking,node_modules/}
+#
+# Verification: hex SHA512 of the pre-built tar.gz is verified before extraction.
+# Reproducibility: esbuild bundles the app + SDK at build time. Runtime needs only
+#   the Node.js interpreter (present in base image) + ajv sub-modules (included).
+#
+# Version: 2026.7.4 (verified on 2026-07-19)
+# Policy: ALLOW_READ — in-memory reasoning, no network/filesystem side effects.
+# Source tarball SHA512 (hex): b6647f89e19a7b079f7cb341ac3a751f5c38b27e0ce93379c9649b312f9831f4bed060f23e39cd2b3a82976baa7dd4625f70f8e0f2548708831aab49a7ab4587
+# Pre-built package SHA512 (hex): c0953145e5c30ee110aeb213128b335d47c80c18328cff2ecede6a850d40db52dd5a83122f9185cdbcfe5f6adde552be3693d826b5656f317a1b3c2a8010c65b
+COPY prebuilt/seqthink-server.tgz /tmp/seqthink-server.tgz
+
+RUN \
+    # Verify SHA512 integrity before extraction
+    echo "c0953145e5c30ee110aeb213128b335d47c80c18328cff2ecede6a850d40db52dd5a83122f9185cdbcfe5f6adde552be3693d826b5656f317a1b3c2a8010c65b  /tmp/seqthink-server.tgz" | sha512sum -c || { \
+        echo "ERROR: SHA512 integrity check failed for sequentialthinking pre-built package"; exit 1; \
+    } && \
+    # Extract to /usr/local/lib/mcp-servers/
+    mkdir -p /usr/local/lib/mcp-servers && \
+    tar -xzf /tmp/seqthink-server.tgz -C /usr/local/lib/mcp-servers/ && \
+    # Install executable symlink at /usr/local/bin/
+    # The bundle.cjs file is the server binary; NODE_PATH points to included deps.
+    ln -sf /usr/local/lib/mcp-servers/mcp-server/mcp-server-sequential-thinking /usr/local/bin/mcp-server-sequential-thinking && \
+    # Cleanup
+    rm -f /tmp/seqthink-server.tgz && \
+    echo "INFO: sequentialthinking_mcp installed successfully (no npm required at runtime)"
+
 # Copy runtime artifacts into /app/
 COPY litellm-entrypoint.sh /app/litellm-entrypoint.sh
 COPY patch_metrics.py /app/patch_metrics.py

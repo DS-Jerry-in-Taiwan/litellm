@@ -63,7 +63,9 @@ services:
       - CBM_LOG_LEVEL=${CBM_LOG_LEVEL:-warn}
       # Allowlist the local Codebase Memory MCP binary for LiteLLM stdio transport.
       # LiteLLM blocks arbitrary stdio commands by default for RCE protection.
-      - LITELLM_MCP_STDIO_EXTRA_COMMANDS=codebase-memory-mcp
+      # ── Phase F1: Sequential Thinking MCP ────────────────────────────────────────
+      # Added mcp-server-sequential-thinking to stdio allowlist.
+      - LITELLM_MCP_STDIO_EXTRA_COMMANDS=codebase-memory-mcp,mcp-server-sequential-thinking
     depends_on:
       postgres:
         condition: service_healthy

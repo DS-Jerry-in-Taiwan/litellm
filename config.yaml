@@ -142,4 +142,12 @@ mcp_servers:
       CBM_ALLOWED_ROOT: "/workspace/litellm"
       CBM_CACHE_DIR: "/data/codebase-memory"
       CBM_LOG_LEVEL: "warn"
+  # ── Phase F1: Sequential Thinking MCP ─────────────────────────────────────────
+  # Local stdio MCP server for chain-of-thought reasoning and problem decomposition.
+  # Installed from npm registry (pinned SHA512 integrity).
+  # Policy: ALLOW_READ — in-memory reasoning, no network/filesystem side effects.
+  sequentialthinking_mcp:
+    command: "/usr/local/bin/mcp-server-sequential-thinking"
+    transport: "stdio"
+    description: "Chain-of-thought reasoning (sequential thinking MCP server)"
 
