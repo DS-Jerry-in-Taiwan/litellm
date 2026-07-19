@@ -28,6 +28,18 @@ resource "aws_ecs_task_definition" "migration" {
         {
           name  = "S3_CONFIG_URL"
           value = "s3://${aws_s3_bucket.config.id}/config.yaml"
+        },
+        {
+          name  = "REDIS_HOST"
+          value = local.redis_host
+        },
+        {
+          name  = "REDIS_PORT"
+          value = tostring(var.redis_port)
+        },
+        {
+          name  = "REDIS_PASSWORD"
+          value = ""
         }
       ]
 

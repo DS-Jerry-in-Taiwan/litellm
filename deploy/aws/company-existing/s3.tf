@@ -11,7 +11,7 @@ resource "aws_s3_bucket" "config" {
   tags          = local.common_tags
 
   lifecycle {
-    prevent_destroy = true
+    # prevent_destroy removed for dev stack cleanup
   }
 }
 
