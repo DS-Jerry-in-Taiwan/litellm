@@ -136,6 +136,44 @@ services:
     #   - redis_data:/data            # 可選：持久化 Redis cache
 
   # ---------------------------------------------------------------------------
+  # Brave Search MCP Sidecar — HTTP MCP service for web search
+  # ---------------------------------------------------------------------------
+  # Purpose: Provides Brave Search MCP to LiteLLM over the Docker network.
+  # Config dependency: config.yaml `brave_search_mcp` points to
+  #   http://brave-search-shared:8080/mcp
+  # Security: No Docker socket, no repo mount, no host port exposure.
+  # Secret: BRAVE_API_KEY is read from .env only and never committed.
+  # Runtime note: the image entrypoint is `node dist/index.js`; we override
+  # entrypoint/command explicitly to force HTTP transport on internal port 8080.
+  # ---------------------------------------------------------------------------
+  brave-search-shared:
+    image: mcp/brave-search@sha256:f58a5c22c1196ec7bd1ca586ce216f2334fc298550ddcf652c0e8adb6d256d78
+    container_name: brave-search-shared
+    entrypoint: ["node"]
+    command:
+      - "dist/index.js"
+      - "--transport"
+      - "http"
+      - "--port"
+      - "8080"
+      - "--host"
+      - "0.0.0.0"
+    environment:
+      - BRAVE_API_KEY=${BRAVE_API_KEY:-}
+    # No host port exposed: only LiteLLM connects internally via Docker network.
+    # ports:
+    #   - "8080:8080"
+    healthcheck:
+      test: ["CMD", "node", "-e", "process.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - litellm-network
+
+  # ---------------------------------------------------------------------------
   # Playwright MCP Sidecar — HTTP MCP service with bundled browser
   # ---------------------------------------------------------------------------
   # Purpose: Provides Playwright-based browser automation to LiteLLM via HTTP SSE.
@@ -178,6 +216,10 @@ services:
       - "8931"
       - "--host"
       - "0.0.0.0"
+      # Allow LiteLLM to reach this service through Docker DNS.
+      # Without this, Playwright MCP returns HTTP 403 for Host: playwright-mcp-server:8931.
+      - "--allowed-hosts"
+      - "playwright-mcp-server,playwright-mcp-server:8931,localhost,localhost:8931,127.0.0.1,127.0.0.1:8931"
     # --init equivalent for proper signal handling
     init: true
     # No pull_policy needed: pinned digest ensures deterministic builds.
@@ -219,8 +261,12 @@ services:
     image: susuperli/mcp-mermaid:0.2.3@sha256:9e0c15c60fc79d15a856ae9260a58578e17e4edb30dc966cdf6153d8057cab4d
     container_name: mermaid-mcp-server
     # Force streamable HTTP mode on internal port 1122.
+    # The image uses the default Node docker-entrypoint, so include the script
+    # path explicitly; otherwise `--transport` is passed to `node` itself.
     # No --host flag: the MCP SDK binds to 0.0.0.0 by default for HTTP transport.
     command:
+      - "node"
+      - "build/index.js"
       - "--transport"
       - "streamable"
       - "--port"
