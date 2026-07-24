@@ -32,6 +32,9 @@ services:
       - ./:/workspace/litellm:ro
       # CBM cache/SQLite graph 寫入專用 volume（與 repo 隔離）
       - codebase_memory_cache:/data/codebase-memory
+      # ── ChatGPT OAuth Token Persistence ─────────────────────────────────────────
+      # 持久化 ChatGPT OAuth token，避免容器重啟後需要重新認證
+      - ./chatgpt_tokens:/root/.config/litellm/chatgpt
     # entrypoint / command 不在此設定；由 Dockerfile ENTRYPOINT / CMD 提供
     # litellm-entrypoint.sh + patch_metrics.py 已在 image 內 /app/
     env_file:

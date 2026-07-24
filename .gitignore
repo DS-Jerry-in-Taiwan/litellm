@@ -85,5 +85,8 @@ deploy/aws/company-existing/terraform.tfvars
 # Credentials directory (contains API keys and service accounts)
 credentials/
 
+# ChatGPT OAuth token persistence (auto-created by compose volume mount)
+chatgpt_tokens/
+
 # OpenCode runtime data
 .omo/
