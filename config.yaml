@@ -97,10 +97,8 @@ general_settings:
   # store_completion: false
   # store_model_plus_response: false
 
-  # === User-level RPM（Phase 1 PoC）===
-  # 強制要求 request body 包含 `user` 參數，未帶 user 的請求會被拒絕
-  # 啟用後可搭配 /customer/new + /budget/new 實作 user-level RPM limit
-  enforce_user_param: true
+  # NOTE: false during PoC stage for Lambda/API Gateway testing; set true for production.
+  enforce_user_param: false
 
   # === CORS（跨域需求時啟用）===
   # cors_origin: "*"
