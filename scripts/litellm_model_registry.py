@@ -126,10 +126,10 @@ MODELS: tuple[ModelSpec, ...] = (
     ),
     ModelSpec(
         alias="agent-developer-fallback",
-        route_model="moonshot/kimi-k2.5",
-        credential_name="moonshot-kimi",
-        api_base="https://api.moonshot.cn/v1",
-        description="Agent Developer fallback - Kimi K2.5",
+        route_model="openai/deepseek-v4-flash-free",
+        credential_name="opencode-go",
+        api_base="https://opencode.ai/zen/v1",
+        description="Agent Developer fallback - DeepSeek V4 Flash Free",
         smoke_max_tokens=200,
     ),
     ModelSpec(
@@ -142,10 +142,10 @@ MODELS: tuple[ModelSpec, ...] = (
     ),
     ModelSpec(
         alias="agent-qa-fallback",
-        route_model="moonshot/kimi-k2.5",
-        credential_name="moonshot-kimi",
-        api_base="https://api.moonshot.cn/v1",
-        description="Agent QA fallback - Kimi K2.5",
+        route_model="openai/deepseek-v4-flash-free",
+        credential_name="opencode-go",
+        api_base="https://opencode.ai/zen/v1",
+        description="Agent QA fallback - DeepSeek V4 Flash Free",
         smoke_max_tokens=200,
     ),
     ModelSpec(
@@ -165,10 +165,10 @@ MODELS: tuple[ModelSpec, ...] = (
     ),
     ModelSpec(
         alias="agent-expert-fallback",
-        route_model="moonshot/kimi-k2.5",
-        credential_name="moonshot-kimi",
-        api_base="https://api.moonshot.cn/v1",
-        description="Agent Expert fallback - Kimi K2.5",
+        route_model="openai/deepseek-v4-flash-free",
+        credential_name="opencode-go",
+        api_base="https://opencode.ai/zen/v1",
+        description="Agent Expert fallback - DeepSeek V4 Flash Free",
         smoke_max_tokens=200,
     ),
     ModelSpec(
@@ -180,10 +180,10 @@ MODELS: tuple[ModelSpec, ...] = (
     ),
     ModelSpec(
         alias="agent-releaser-fallback",
-        route_model="moonshot/kimi-k2.5",
-        credential_name="moonshot-kimi",
-        api_base="https://api.moonshot.cn/v1",
-        description="Agent Releaser fallback - Kimi K2.5",
+        route_model="openai/deepseek-v4-flash-free",
+        credential_name="opencode-go",
+        api_base="https://opencode.ai/zen/v1",
+        description="Agent Releaser fallback - DeepSeek V4 Flash Free",
         smoke_max_tokens=200,
     ),
     ModelSpec(
@@ -200,6 +200,14 @@ MODELS: tuple[ModelSpec, ...] = (
         credential_name="opencode-go",
         api_base="https://opencode.ai/zen/v1",
         description="Agent Designer primary - DeepSeek V4 Flash Free",
+        smoke_max_tokens=200,
+    ),
+    ModelSpec(
+        alias="deepseek-v4-flash",
+        route_model="deepseek/deepseek-v4-flash",
+        credential_name="opencode-go",
+        api_base="https://opencode.ai/zen/go/v1",
+        description="Universal fallback model - DeepSeek V4 Flash",
         smoke_max_tokens=200,
     ),
 )
