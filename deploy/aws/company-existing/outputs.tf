@@ -34,3 +34,31 @@ output "alb_dns_name" {
   description = "ALB DNS name for smoke tests"
   value       = aws_lb.main.dns_name
 }
+
+# =============================================================================
+# ECR Outputs (Phase 3)
+# =============================================================================
+
+output "ecr_repository_arn" {
+  description = "ECR repository ARN used by ECS (managed or existing)"
+  value       = local.ecr_repository_arn
+}
+
+output "ecr_repository_url" {
+  description = "ECR repository URL for docker push"
+  value       = local.ecr_repository_url
+}
+
+# =============================================================================
+# Redis / ElastiCache Outputs (Phase 3)
+# =============================================================================
+
+output "redis_endpoint" {
+  description = "ElastiCache Redis endpoint used by LiteLLM (managed or external)"
+  value       = var.create_redis ? aws_elasticache_replication_group.redis[0].primary_endpoint_address : var.redis_host
+}
+
+output "redis_port" {
+  description = "Redis port used by LiteLLM"
+  value       = var.redis_port
+}

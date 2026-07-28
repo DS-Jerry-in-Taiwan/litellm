@@ -86,8 +86,97 @@ variable "image_tag" {
 }
 
 variable "ecr_repository_arn" {
-  description = "ARN of the ECR repository containing the LiteLLM container image"
+  description = "Existing ECR repository ARN when create_ecr_repository=false. Leave empty when Terraform creates ECR."
   type        = string
+  default     = ""
+
+  validation {
+    condition     = var.create_ecr_repository || var.ecr_repository_arn != ""
+    error_message = "ecr_repository_arn is required when create_ecr_repository=false."
+  }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ECR Repository (Phase 3)
+# ─────────────────────────────────────────────────────────────────────────────
+
+variable "create_ecr_repository" {
+  description = "Create and manage the LiteLLM ECR repository in this Terraform stack."
+  type        = bool
+  default     = false
+}
+
+variable "ecr_repository_name" {
+  description = "ECR repository name when create_ecr_repository=true."
+  type        = string
+  default     = "litellm"
+}
+
+variable "ecr_image_tag_mutability" {
+  description = "ECR tag mutability. Use IMMUTABLE for deployment safety."
+  type        = string
+  default     = "IMMUTABLE"
+
+  validation {
+    condition     = contains(["MUTABLE", "IMMUTABLE"], var.ecr_image_tag_mutability)
+    error_message = "ecr_image_tag_mutability must be MUTABLE or IMMUTABLE."
+  }
+}
+
+variable "ecr_force_delete" {
+  description = "Allow deleting the ECR repository with images. Keep false outside disposable test envs."
+  type        = bool
+  default     = false
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Redis / ElastiCache (Phase 3)
+# ─────────────────────────────────────────────────────────────────────────────
+
+variable "create_redis" {
+  description = "Create ElastiCache Redis for LiteLLM shared cache/RPM counters."
+  type        = bool
+  default     = false
+}
+
+variable "redis_node_type" {
+  description = "ElastiCache Redis node type."
+  type        = string
+  default     = "cache.t3.micro"
+}
+
+variable "redis_num_cache_clusters" {
+  description = "Number of Redis cache nodes. Use 1 for office-mfa validation; >1 enables failover."
+  type        = number
+  default     = 1
+
+  validation {
+    condition     = var.redis_num_cache_clusters >= 1
+    error_message = "redis_num_cache_clusters must be at least 1."
+  }
+}
+
+variable "redis_port" {
+  description = "Redis port."
+  type        = number
+  default     = 6379
+}
+
+variable "redis_auth_enabled" {
+  description = "Future toggle for Redis AUTH token. Phase 3 keeps false to avoid secrets in Terraform state; remove/replace this validation in a future Secrets Manager AUTH phase."
+  type        = bool
+  default     = false
+
+  validation {
+    condition     = var.redis_auth_enabled == false
+    error_message = "redis_auth_enabled is not implemented in Phase 3. Keep false to avoid secrets in Terraform state."
+  }
+}
+
+variable "redis_host" {
+  description = "Existing Redis host when create_redis=false. Empty means no external Redis."
+  type        = string
+  default     = ""
 }
 
 variable "container_port" {
@@ -212,4 +301,52 @@ variable "litellm_salt_key" {
   description = "LiteLLM salt key. Will be stored in AWS Secrets Manager."
   type        = string
   sensitive   = true
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# LiteLLM Admin UI (Runtime Fix)
+# ─────────────────────────────────────────────────────────────────────────────
+
+variable "ui_username" {
+  description = "LiteLLM Admin UI username. office-mfa dev default is admin."
+  type        = string
+  default     = "admin"
+}
+
+variable "ui_password" {
+  description = "LiteLLM Admin UI password. office-mfa dev default is admin; production must override."
+  type        = string
+  sensitive   = true
+  default     = "admin"
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# LiteLLM Runtime Env (Store Model in DB)
+# ─────────────────────────────────────────────────────────────────────────────
+
+variable "store_model_in_db" {
+  description = "Set STORE_MODEL_IN_DB env var for LiteLLM ECS container. 'True' enables Admin UI Add Model feature."
+  type        = string
+  default     = "True"
+
+  validation {
+    condition     = contains(["True", "False"], var.store_model_in_db)
+    error_message = "store_model_in_db must be 'True' or 'False'."
+  }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ECS Deployment Circuit Breaker (P1 Hardening)
+# ─────────────────────────────────────────────────────────────────────────────
+
+variable "ecs_deployment_circuit_breaker_enable" {
+  description = "Enable ECS deployment circuit breaker."
+  type        = bool
+  default     = true
+}
+
+variable "ecs_deployment_circuit_breaker_rollback" {
+  description = "Rollback failed ECS deployments automatically."
+  type        = bool
+  default     = true
 }

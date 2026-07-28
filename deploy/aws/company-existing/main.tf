@@ -20,10 +20,20 @@ locals {
   name_prefix = "litellm"
   common_tags = var.tags
 
-  # ── ECR Image URI (derived from ARN for ECS task definition) ──
-  account_id    = data.aws_caller_identity.current.account_id
-  ecr_image_uri = "${local.account_id}.dkr.ecr.${var.region}.amazonaws.com/${element(split("/", var.ecr_repository_arn), length(split("/", var.ecr_repository_arn)) - 1)}"
-  ecr_image     = "${local.ecr_image_uri}:${var.image_tag}"
+  # ── ECR Image (Phase 3 dual-mode: managed ECR or existing external ARN) ──
+  account_id = data.aws_caller_identity.current.account_id
+
+  # ECR repository ARN: Terraform-managed or existing external
+  ecr_repository_arn = var.create_ecr_repository ? aws_ecr_repository.litellm[0].arn : var.ecr_repository_arn
+
+  # ECR repository URL: managed repo URL, or URL derived from existing ARN
+  ecr_repository_url = var.create_ecr_repository ? aws_ecr_repository.litellm[0].repository_url : "${local.account_id}.dkr.ecr.${var.region}.amazonaws.com/${element(split("/", var.ecr_repository_arn), length(split("/", var.ecr_repository_arn)) - 1)}"
+
+  # Full image URI for ECS task definition
+  ecr_image = "${local.ecr_repository_url}:${var.image_tag}"
+
+  # Backward-compatible alias (used by existing code paths)
+  ecr_image_uri = local.ecr_repository_url
 
   # ── Bridge Layer — conditional resource flags ──
   deploy = {
