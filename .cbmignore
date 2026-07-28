@@ -1,0 +1,110 @@
+# =============================================================================
+# .cbmignore — Codebase Memory MCP Index Exclusion Rules
+# =============================================================================
+# Purpose: Prevent indexing of secrets, Terraform state, credentials, generated
+#         runtime files, and large/irrelevant artifacts.
+# Reference: docs/agent_context/phase_litellm_codebase_memory_mcp/security_boundary.md
+#
+# .cbmignore uses gitignore-style glob patterns.
+# CBM_ALLOWED_ROOT is bounded to /workspace/litellm — paths here are relative
+# to that root. Patterns are evaluated during index_repository.
+# =============================================================================
+
+# ── Environment / secrets ──────────────────────────────────────────────────────
+
+.env
+.env.*
+*.env
+.env.local
+.env.*.local
+
+# ── OpenCode secrets and config ────────────────────────────────────────────────
+
+.opencode/.env
+.opencode/secrets/
+.opencode/opencode.json
+
+# ── Terraform state, plans, and variable files ──────────────────────────────────
+
+deploy/aws/**/terraform.tfstate
+deploy/aws/**/terraform.tfstate.backup
+deploy/aws/**/terraform.tfstate.d/
+deploy/aws/**/terraform.tfvars
+deploy/aws/**/tfplan*
+*.tfstate
+*.tfstate.backup
+*.tfplan
+deploy/aws/production/.terraform/
+deploy/aws/company-existing/.terraform/
+deploy/aws/production/terraform.tfstate
+deploy/aws/company-existing/terraform.tfstate
+deploy/aws/company-existing/tfplan*
+
+# ── Credentials and keys ───────────────────────────────────────────────────────
+
+credentials/
+*.pem
+*.key
+*.crt
+*.csr
+*.p12
+*.jks
+*.pfx
+*secret*
+*credential*
+*.password
+*.passwd
+
+# ── VCS ───────────────────────────────────────────────────────────────────────
+
+.git/
+.gitignore
+
+# ── Terraform provider cache ────────────────────────────────────────────────────
+
+.terraform/
+infra/aws/.terraform/
+
+# ── Agent context / transient task files ───────────────────────────────────────
+
+docs/agent_context/
+
+# ── OpenCode runtime data ──────────────────────────────────────────────────────
+
+.opencode/
+.omo/
+
+# ── Logs and temporary files ───────────────────────────────────────────────────
+
+logs/
+*.log
+tmp/
+.tmp/
+/tmp/
+
+# ── Python build artifacts ────────────────────────────────────────────────────
+
+__pycache__/
+*.py[cod]
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+*.whl
+
+# ── OS / IDE noise ─────────────────────────────────────────────────────────────
+
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ── Docker volumes (if accidentally mounted) ────────────────────────────────────
+
+postgres_data/
+prometheus_data/
+redis_data/

@@ -146,6 +146,125 @@ check_env() {
 }
 
 # ─────────────────────────────────────────────────────────────
+# 檢查 MCP Server 環境變數
+# ─────────────────────────────────────────────────────────────
+# Enabled-server detection: requires active (non-commented) url: under the
+# specific MCP server block in config.yaml.  github_mcp without an active URL
+# produces an advisory warning only (not a hard block).
+# ─────────────────────────────────────────────────────────────
+check_mcp_env() {
+    log_section "檢查 MCP Server 環境設定"
+
+    if [[ ! -f "config.yaml" ]]; then
+        log_warn "config.yaml 不存在；跳過 MCP 環境檢查"
+        return 0
+    fi
+
+    local has_warnings=0
+
+    # Helper: check if a server block in config.yaml has an active (non-commented) url:
+    # Returns 0 + echoes "enabled" / "disabled" / "not_found"
+    _cfg_server_enabled() {
+        local cfg="$1"
+        local server="$2"
+        awk -v s="$server" '
+            BEGIN { in=0; has_active_url=0; has_disabled_url=0 }
+            /^[[:space:]]*#/ { next }
+            $0 ~ "^[[:space:]]*" s "[[:space:]]*:" { in=1; next }
+            in && /^[[:space:]]*url:[[:space:]]*/ { has_active_url=1; next }
+            in && /^[[:space:]]*_disabled_reason:/ { has_disabled_url=1; next }
+            in && /^[[:space:]]*[a-zA-Z_][a-zA-Z0-9_]*:[[:space:]]*/ {
+                # New top-level key — end of block unless same server name
+                if ($0 !~ "^[[:space:]]*" s ":") { in=0 }
+            }
+            END {
+                if (has_active_url) { print "enabled" }
+                else if (has_disabled_url) { print "disabled" }
+                else { print "not_found" }
+            }
+        ' "$cfg"
+    }
+
+    # Helper: read .env var status (missing/empty/present) without printing value
+    _env_status() {
+        local var="$1"
+        if ! grep -q "^${var}=" .env 2>/dev/null; then
+            echo "missing"
+        elif [[ -z "$(grep -m1 "^${var}=" .env | cut -d'=' -f2- | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')" ]]; then
+            echo "empty"
+        else
+            echo "present"
+        fi
+    }
+
+    # ── tavily_mcp ──────────────────────────────────────────
+    local tavily_status
+    tavily_status=$(_cfg_server_enabled "config.yaml" "tavily_mcp")
+    if [[ "$tavily_status" == "enabled" ]]; then
+        local tavily_env
+        tavily_env=$(_env_status "TAVILY_API_KEY")
+        if [[ "$tavily_env" != "present" ]]; then
+            log_warn "tavily_mcp is enabled but TAVILY_API_KEY is $tavily_env."
+            log_warn "  修正: 在 .env 中填入 Tavily API Key，之後執行:"
+            log_warn "        docker compose up -d --force-recreate litellm"
+            ((has_warnings++))
+        fi
+    fi
+
+    # ── supermemory_mcp ─────────────────────────────────────
+    local smem_status
+    smem_status=$(_cfg_server_enabled "config.yaml" "supermemory_mcp")
+    if [[ "$smem_status" == "enabled" ]]; then
+        local smem_env
+        smem_env=$(_env_status "SUPERMEMORY_API_KEY")
+        if [[ "$smem_env" != "present" ]]; then
+            log_warn "supermemory_mcp is enabled but SUPERMEMORY_API_KEY is $smem_env."
+            log_warn "  修正: 在 .env 中填入 Supermemory API Key，之後執行:"
+            log_warn "        docker compose up -d --force-recreate litellm"
+            ((has_warnings++))
+        fi
+    fi
+
+    # ── brave_search_mcp ────────────────────────────────────
+    local brave_status
+    brave_status=$(_cfg_server_enabled "config.yaml" "brave_search_mcp")
+    if [[ "$brave_status" == "enabled" ]]; then
+        local brave_env
+        brave_env=$(_env_status "BRAVE_API_KEY")
+        if [[ "$brave_env" != "present" ]]; then
+            log_warn "brave_search_mcp is enabled but BRAVE_API_KEY is $brave_env."
+            log_warn "  修正: 在 .env 中填入 Brave Search API Key，之後執行:"
+            log_warn "        docker compose up -d --force-recreate litellm"
+            ((has_warnings++))
+        fi
+    fi
+
+    # ── github_mcp advisory ─────────────────────────────────
+    # Only produce advisory when github_mcp block exists but has no active url.
+    # This is not a hard block because github_mcp does not have a verified HTTP server.
+    local github_status
+    github_status=$(_cfg_server_enabled "config.yaml" "github_mcp")
+    if [[ "$github_status" == "disabled" ]]; then
+        log_warn "github_mcp block is present but has no active url — server will register as unhealthy."
+        log_warn "  建議: 完全註銷 github_mcp block 或等待日後具備驗證過的 HTTP MCP 端點後再啟用。"
+        log_warn "        如要移除，註銷 config.yaml 中 github_mcp 整個區塊。"
+        ((has_warnings++))
+    fi
+
+    # ── Summary ─────────────────────────────────────────────
+    if [[ "$has_warnings" -gt 0 ]]; then
+        echo ""
+        log_warn "發現 $has_warnings 個 MCP 環境問題。LiteLLM 仍可啟動，但受影響的 MCP 伺服器可能無法正常運作。"
+        log_info "如需初始化 MCP 環境變數，執行: bash scripts/litellm_mcp_env_bootstrap.sh --init-local"
+        log_info "查看詳細狀態:         bash scripts/litellm_mcp_env_bootstrap.sh --check"
+    else
+        log_success "MCP 環境檢查通過"
+    fi
+
+    return 0  # Never block startup
+}
+
+# ─────────────────────────────────────────────────────────────
 # 檢查 config.yaml
 # ─────────────────────────────────────────────────────────────
 check_config() {
@@ -299,6 +418,7 @@ main() {
     
     check_docker
     check_env
+    check_mcp_env
     check_config
     show_config_summary
     

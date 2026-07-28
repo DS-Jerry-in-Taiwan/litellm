@@ -38,7 +38,7 @@ resource "aws_iam_role" "ecs_execution" {
 
   lifecycle {
     create_before_destroy = true
-    prevent_destroy       = true
+    # prevent_destroy removed for dev stack cleanup
   }
 }
 
@@ -63,14 +63,14 @@ resource "aws_iam_role_policy" "ecs_execution" {
       },
       {
         # ECR: Pull image from the LiteLLM repository
-        # Scoped to the specific ECR repository ARN provided via var.ecr_repository_arn.
+        # Scoped to the ECR repository ARN (managed or existing).
         Sid    = "ECRPullLiteLLM"
         Effect = "Allow"
         Action = [
           "ecr:BatchGetImage",
           "ecr:GetDownloadUrlForLayer"
         ]
-        Resource = var.ecr_repository_arn
+        Resource = local.ecr_repository_arn
       },
       {
         # CloudWatch Logs: Write container logs
@@ -133,7 +133,7 @@ resource "aws_iam_role" "ecs_task" {
 
   lifecycle {
     create_before_destroy = true
-    prevent_destroy       = true
+    # prevent_destroy removed for dev stack cleanup
   }
 }
 
@@ -162,6 +162,18 @@ resource "aws_iam_role_policy" "ecs_task" {
           "s3:GetObject"
         ]
         Resource = "${aws_s3_bucket.config.arn}/*"
+      },
+      {
+        # Bedrock: Invoke foundation models (Claude, etc.)
+        # Resource="*" is required because model ARNs are dynamically
+        # created per region/account and cannot be pre-enumerated.
+        Sid    = "BedrockInvoke"
+        Effect = "Allow"
+        Action = [
+          "bedrock:InvokeModel",
+          "bedrock:InvokeModelWithResponseStream"
+        ]
+        Resource = "*"
       }
     ]
   })

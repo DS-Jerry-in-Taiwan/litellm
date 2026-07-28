@@ -52,7 +52,7 @@ resource "aws_vpc_security_group_egress_rule" "alb_to_ecs" {
   to_port     = var.container_port
   ip_protocol = "tcp"
 
-  referenced_security_group_id = aws_security_group.ecs[0].id
+  referenced_security_group_id = var.existing_ecs_security_group_id != "" ? var.existing_ecs_security_group_id : aws_security_group.ecs[0].id
 }
 
 resource "aws_vpc_security_group_egress_rule" "ecs_to_data" {

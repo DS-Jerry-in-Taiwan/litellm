@@ -64,9 +64,13 @@ litellm_settings:
 
   # === Model Fallback — primary 不可用時自動切換 ===
   fallbacks: [
-    {"agent-architect-primary": ["agent-architect-fallback-1", "deepseek-v4-flash"]},
-    {"agent-developer-primary": ["agent-lightweight-primary", "deepseek-v4-flash"]},
-    {"agent-qa-primary": ["agent-lightweight-primary", "deepseek-v4-flash"]}
+    {"agent-architect-primary": ["agent-architect-fallback", "deepseek-v4-flash"]},
+    {"agent-developer-primary": ["agent-developer-fallback", "deepseek-v4-flash"]},
+    {"agent-qa-primary": ["agent-qa-fallback", "deepseek-v4-flash"]},
+    {"agent-expert-primary": ["agent-expert-fallback", "deepseek-v4-flash"]},
+    {"agent-releaser-primary": ["agent-releaser-fallback", "deepseek-v4-flash"]},
+    {"agent-debugger-primary": ["agent-qa-primary", "deepseek-v4-flash"]},
+    {"agent-designer-primary": ["agent-qa-primary", "deepseek-v4-flash"]}
   ]
 
 # ---------------------------------------------------------------------------
@@ -93,10 +97,8 @@ general_settings:
   # store_completion: false
   # store_model_plus_response: false
 
-  # === User-level RPM（Phase 1 PoC）===
-  # 強制要求 request body 包含 `user` 參數，未帶 user 的請求會被拒絕
-  # 啟用後可搭配 /customer/new + /budget/new 實作 user-level RPM limit
-  enforce_user_param: true
+  # NOTE: false during PoC stage for Lambda/API Gateway testing; set true for production.
+  enforce_user_param: false
 
   # === CORS（跨域需求時啟用）===
   # cors_origin: "*"
@@ -116,18 +118,70 @@ mcp_servers:
     url: "https://mcp.supermemory.ai/mcp"
     transport: "http"
     description: "Cross-session memory"
-    static_headers:
-      Authorization: "Bearer os.environ/SUPERMEMORY_API_KEY"
-  github_mcp:
-    url: "http://github-mcp-server:8082"
-    transport: "http"
-    description: "GitHub API"
-    static_headers:
-      Authorization: "Bearer os.environ/GITHUB_TOKEN"
+    auth_type: "bearer_token"
+    auth_value: os.environ/SUPERMEMORY_API_KEY
+  # github_mcp is intentionally fully disabled (G0).
+  # Reason: current github-mcp-server is not reachable from litellm-proxy and
+  # does not expose a verified HTTP/streamable HTTP endpoint for LiteLLM Hub.
+  # Re-enable only after adding a verified HTTP MCP service and confirming DNS
+  # from litellm-proxy.
+  # github_mcp:
+  #   url: "http://github-mcp-server:8082/mcp"
+  #   transport: "http"
+  #   description: "GitHub API"
+  #   static_headers:
+  #     Authorization: "Bearer os.environ/GITHUB_PERSONAL_ACCESS_TOKEN"
   brave_search_mcp:
     url: "http://brave-search-shared:8080/mcp"
     transport: "http"
-    description: "Web search via Brave"
+    description: "Web search via Brave (requires brave-search-shared container in litellm-network)"
     static_headers:
-      Authorization: "Bearer os.environ/BRAVE_SEARCH_API_KEY"
+      Authorization: "Bearer os.environ/BRAVE_API_KEY"
+  # ── Phase F2a: Playwright MCP Sidecar ────────────────────────────────────────────
+  # HTTP sidecar service for browser automation using Playwright.
+  # Communicates via Docker network to playwright-mcp-server:8931.
+  # Transport: SSE/Streamable HTTP at /mcp endpoint.
+  # Runtime requirement: the sidecar is profile-gated (browser-mcp).
+  #   Start with: docker compose --profile browser-mcp up -d
+  #   If the sidecar profile is not running, MCP health will report playwright_mcp as unhealthy
+  #   but LiteLLM itself stays operational.
+  # No API key required.
+  # Policy: read-only browser observations = ALLOW_READ; interactions/evaluate/upload/tabs = ASK
+  playwright_mcp:
+    url: "http://playwright-mcp-server:8931/mcp"
+    transport: "http"
+    description: "Browser automation via Playwright MCP sidecar"
+  # ── Track C: Mermaid MCP Sidecar ───────────────────────────────────────────────
+  # HTTP sidecar service for Mermaid diagram generation.
+  # Communicates via Docker network to mermaid-mcp-server:1122.
+  # Transport: Streamable HTTP at /mcp endpoint.
+  # Runtime requirement: the sidecar is profile-gated (browser-mcp).
+  #   Start with: docker compose --profile browser-mcp up -d
+  #   If the sidecar profile is not running, MCP health will report mermaid_mcp as unhealthy
+  #   but LiteLLM itself stays operational.
+  # No API key required.
+  mermaid_mcp:
+    url: "http://mermaid-mcp-server:1122/mcp"
+    transport: "http"
+    description: "Mermaid diagram generation via Mermaid MCP sidecar (requires browser-mcp profile)"
+  # ── Phase E: Codebase Memory MCP ───────────────────────────────────────────────
+  # Local stdio MCP server for codebase graph indexing and query.
+  # Bounded by CBM_ALLOWED_ROOT=/workspace/litellm (compose env) and .cbmignore.
+  # No external API key required.
+  codebase_memory_mcp:
+    command: "/usr/local/bin/codebase-memory-mcp"
+    transport: "stdio"
+    description: "Local codebase graph memory for /workspace/litellm"
+    env:
+      CBM_ALLOWED_ROOT: "/workspace/litellm"
+      CBM_CACHE_DIR: "/data/codebase-memory"
+      CBM_LOG_LEVEL: "warn"
+  # ── Phase F1: Sequential Thinking MCP ─────────────────────────────────────────
+  # Local stdio MCP server for chain-of-thought reasoning and problem decomposition.
+  # Installed from npm registry (pinned SHA512 integrity).
+  # Policy: ALLOW_READ — in-memory reasoning, no network/filesystem side effects.
+  sequentialthinking_mcp:
+    command: "/usr/local/bin/mcp-server-sequential-thinking"
+    transport: "stdio"
+    description: "Chain-of-thought reasoning (sequential thinking MCP server)"
 
