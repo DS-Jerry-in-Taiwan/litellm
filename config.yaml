@@ -69,8 +69,11 @@ litellm_settings:
     {"agent-qa-primary": ["agent-qa-fallback", "deepseek-v4-flash"]},
     {"agent-expert-primary": ["agent-expert-fallback", "deepseek-v4-flash"]},
     {"agent-releaser-primary": ["agent-releaser-fallback", "deepseek-v4-flash"]},
-    {"agent-debugger-primary": ["agent-qa-primary", "deepseek-v4-flash"]},
-    {"agent-designer-primary": ["agent-qa-primary", "deepseek-v4-flash"]}
+    {"agent-debugger-primary": ["agent-debugger-fallback", "deepseek-v4-flash"]},
+    {"agent-designer-primary": ["agent-designer-fallback", "deepseek-v4-flash"]},
+    {"agent-build-primary": ["agent-build-fallback", "deepseek-v4-flash"]},
+    {"frontend-wireframe-primary": ["frontend-wireframe-fallback", "deepseek-v4-flash"]},
+    {"atlas-omo": ["agent-debugger-fallback", "deepseek-v4-flash"]}
   ]
 
 # ---------------------------------------------------------------------------
