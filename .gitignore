@@ -97,3 +97,8 @@ chatgpt_tokens/
 
 # OpenCode runtime data
 .omo/
+.opencode-runtime/
+
+# Local runtime / rollback artifacts
+config.yaml.failed-*
+config.yaml.rollback-*
