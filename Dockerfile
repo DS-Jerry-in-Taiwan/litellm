@@ -12,7 +12,13 @@
 #   - .env is NOT copied; secrets must come from env_file in compose or AWS Secrets
 # =============================================================================
 
-FROM docker.litellm.ai/berriai/litellm:main-stable
+# Pin to v1.94.0 by immutable digest for MCP integer progressToken fix (PR #32402).
+# Rationale: v1.94.0 contains PR #32402 which fixes TypeError on integer progressToken.
+# Replaces main-stable floating tag with immutable digest for reproducibility.
+# v1.94.0 digest (linux/amd64): sha256:65d84a2282137b4dc73bbe184650a7c807177c533e4223b3bfbc87963fe3fabe
+# Rollback digest (v1.92.0): sha256:9ef6f45bc0104940571765e610c52a1d761b5ec85efcd193795281086ee61277
+# Dual registry: docker.litellm.ai/berriai/litellm == ghcr.io/berriai/litellm (same digest)
+FROM docker.litellm.ai/berriai/litellm:v1.94.0@sha256:65d84a2282137b4dc73bbe184650a7c807177c533e4223b3bfbc87963fe3fabe
 
 # Install curl for ECS container health checks.
 RUN apk add --no-cache curl
