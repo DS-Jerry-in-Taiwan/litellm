@@ -87,6 +87,18 @@ RUN \
     rm -f /tmp/seqthink-server.tgz && \
     echo "INFO: sequentialthinking_mcp installed successfully (no npm required at runtime)"
 
+# ── PR #38719: ChatGPT Responses SSE-recovery overlay (BUILD time) ──────────
+# Bakes the validated upstream fix into the *installed* litellm package for
+# chatgpt.com native Responses → Chat-Completions bridge SSE output recovery.
+# Applied once at image build time (NOT a runtime monkeypatch; no site-packages
+# mutation at startup). The overlay script is fail-closed: it verifies the
+# pre-overlay baseline sha256, the committed integrated file sha256, the
+# post-overlay merged sha256, py_compiles the result, and greps the PR method
+# marker.
+COPY integration/pr38719/pr38719_build_overlay.sh /tmp/pr38719_build_overlay.sh
+COPY integration/pr38719/transformation.py /tmp/transformation_38719.py
+RUN /bin/sh /tmp/pr38719_build_overlay.sh && rm -f /tmp/pr38719_build_overlay.sh /tmp/transformation_38719.py
+
 # Copy runtime artifacts into /app/
 COPY litellm-entrypoint.sh /app/litellm-entrypoint.sh
 COPY patch_metrics.py /app/patch_metrics.py
