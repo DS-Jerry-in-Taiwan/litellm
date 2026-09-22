@@ -34,6 +34,10 @@ resource "aws_ecs_task_definition" "litellm" {
 
       environment = [
         {
+          name  = "SERVER_ROOT_PATH"
+          value = "/litellm"
+        },
+        {
           name  = "S3_CONFIG_URL"
           value = "s3://${aws_s3_bucket.config.id}/config.yaml"
         },

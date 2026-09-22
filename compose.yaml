@@ -45,6 +45,9 @@ services:
       - DATABASE_URL=${DATABASE_URL}
       - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY}
       - LITELLM_SALT_KEY=${LITELLM_SALT_KEY}
+      # Keep UI assets, redirects, cookies and management APIs under the
+      # shared ALB service namespace used by development.
+      - SERVER_ROOT_PATH=${SERVER_ROOT_PATH:-/litellm}
       # PostgreSQL 連線資訊（litellm 透過 DATABASE_URL 連線，POSTGRES_* 變數留給 postgres service 自己使用）
       # Redis 連線 — 多 pod 部署強烈建議，單機 PoC 亦啟用以驗證 Redis 整合
       - REDIS_HOST=${REDIS_HOST:-redis}
