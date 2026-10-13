@@ -15,7 +15,72 @@
 # 統一透過 Admin UI / API 建立 LLM Credentials 與 DB-managed models。
 # 詳細說明：LiteLLM 支援將 model 設定存入 PostgreSQL（store_model_in_db: true），
 # 可透過 Admin UI 或 API 動態管理 provider credentials，避免 provider key rotation 需要重建 container。
-model_list: []
+model_list:
+  - model_name: codex-auto-review
+    litellm_params:
+      model: openai/codex-auto-review
+      api_base: http://10.223.81.130:48760/v1
+      api_key: os.environ/CODEX_MANAGER_API_KEY
+  - model_name: gpt-6.1-sol
+    litellm_params:
+      model: openai/gpt-6.1-sol
+      api_base: http://10.223.81.130:48760/v1
+      api_key: os.environ/CODEX_MANAGER_API_KEY
+  - model_name: gpt-6-sol
+    litellm_params:
+      model: openai/gpt-6-sol
+      api_base: http://10.223.81.130:48760/v1
+      api_key: os.environ/CODEX_MANAGER_API_KEY
+  - model_name: gpt-6-luna
+    litellm_params:
+      model: openai/gpt-6-luna
+      api_base: http://10.223.81.130:48760/v1
+      api_key: os.environ/CODEX_MANAGER_API_KEY
+  - model_name: gpt-6-astra
+    litellm_params:
+      model: openai/gpt-6-astra
+      api_base: http://10.223.81.130:48760/v1
+      api_key: os.environ/CODEX_MANAGER_API_KEY
+  - model_name: gpt-5.6-sol
+    litellm_params:
+      model: openai/gpt-5.6-sol
+      api_base: http://10.223.81.130:48760/v1
+      api_key: os.environ/CODEX_MANAGER_API_KEY
+  - model_name: gpt-5.6-terra
+    litellm_params:
+      model: openai/gpt-5.6-terra
+      api_base: http://10.223.81.130:48760/v1
+      api_key: os.environ/CODEX_MANAGER_API_KEY
+  - model_name: gpt-5.6-luna
+    litellm_params:
+      model: openai/gpt-5.6-luna
+      api_base: http://10.223.81.130:48760/v1
+      api_key: os.environ/CODEX_MANAGER_API_KEY
+  - model_name: gpt-5.5
+    litellm_params:
+      model: openai/gpt-5.5
+      api_base: http://10.223.81.130:48760/v1
+      api_key: os.environ/CODEX_MANAGER_API_KEY
+  - model_name: plan
+    litellm_params:
+      model: openai/gpt-6.1-sol
+      api_base: http://10.223.81.130:48760/v1
+      api_key: os.environ/CODEX_MANAGER_API_KEY
+  - model_name: exec
+    litellm_params:
+      model: openai/gpt-6-luna
+      api_base: http://10.223.81.130:48760/v1
+      api_key: os.environ/CODEX_MANAGER_API_KEY
+  - model_name: verify
+    litellm_params:
+      model: openai/gpt-6.1-sol
+      api_base: http://10.223.81.130:48760/v1
+      api_key: os.environ/CODEX_MANAGER_API_KEY
+  - model_name: review
+    litellm_params:
+      model: openai/codex-auto-review
+      api_base: http://10.223.81.130:48760/v1
+      api_key: os.environ/CODEX_MANAGER_API_KEY
 
 # ---------------------------------------------------------------------------
 # LiteLLM 全域設定 — litellm_settings
