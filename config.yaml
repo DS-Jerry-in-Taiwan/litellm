@@ -61,6 +61,26 @@ model_list:
       model: openai/gpt-5.5
       api_base: http://10.223.81.130:48760/v1
       api_key: os.environ/CODEX_MANAGER_API_KEY
+  - model_name: plan
+    litellm_params:
+      model: openai/gpt-6.1-sol
+      api_base: http://10.223.81.130:48760/v1
+      api_key: os.environ/CODEX_MANAGER_API_KEY
+  - model_name: exec
+    litellm_params:
+      model: openai/gpt-6-luna
+      api_base: http://10.223.81.130:48760/v1
+      api_key: os.environ/CODEX_MANAGER_API_KEY
+  - model_name: verify
+    litellm_params:
+      model: openai/gpt-6.1-sol
+      api_base: http://10.223.81.130:48760/v1
+      api_key: os.environ/CODEX_MANAGER_API_KEY
+  - model_name: review
+    litellm_params:
+      model: openai/codex-auto-review
+      api_base: http://10.223.81.130:48760/v1
+      api_key: os.environ/CODEX_MANAGER_API_KEY
 
 # ---------------------------------------------------------------------------
 # LiteLLM 全域設定 — litellm_settings
