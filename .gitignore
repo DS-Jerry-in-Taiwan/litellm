@@ -102,3 +102,4 @@ chatgpt_tokens/
 # Local runtime / rollback artifacts
 config.yaml.failed-*
 config.yaml.rollback-*
+*.bak*

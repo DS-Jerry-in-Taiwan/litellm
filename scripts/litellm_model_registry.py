@@ -41,9 +41,12 @@ class CredentialSpec:
 class ModelSpec:
     alias: str
     route_model: str
-    credential_name: str
     description: str
+    credential_name: str | None = None
     api_base: str | None = None
+    custom_llm_provider: str | None = None
+    reasoning_effort: str | None = None
+    clear_reasoning_effort: bool = False
     smoke_max_tokens: int = 200
 
 
@@ -70,6 +73,23 @@ CREDENTIALS: tuple[CredentialSpec, ...] = (
 
 
 MODELS: tuple[ModelSpec, ...] = (
+    ModelSpec(
+        alias="agent-build-primary",
+        route_model="chatgpt/gpt-5.6-sol",
+        description="Agent Build primary - GPT-5.6 Sol via ChatGPT OAuth",
+        reasoning_effort="high",
+        smoke_max_tokens=300,
+    ),
+    ModelSpec(
+        alias="agent-build-fallback",
+        route_model="deepseek-v4-flash",
+        credential_name="deepseek-api",
+        api_base="",
+        custom_llm_provider="deepseek",
+        description="Agent Build fallback - DeepSeek V4 Flash",
+        clear_reasoning_effort=True,
+        smoke_max_tokens=200,
+    ),
     ModelSpec(
         alias="moonshotai-cn/kimi-k2.5",
         route_model="moonshot/kimi-k2.5",
@@ -118,10 +138,10 @@ MODELS: tuple[ModelSpec, ...] = (
     ),
     ModelSpec(
         alias="agent-developer-primary",
-        route_model="openai/minimax-m2.7",
+        route_model="openai/kimi-k2.7-code",
         credential_name="opencode-go",
         api_base="https://opencode.ai/zen/go/v1",
-        description="Agent Developer primary - MiniMax M2.7",
+        description="Agent Developer primary - Kimi K2.7 Code",
         smoke_max_tokens=300,
     ),
     ModelSpec(
@@ -287,10 +307,17 @@ def credential_payload(spec: CredentialSpec) -> dict[str, Any]:
 def model_payload(spec: ModelSpec) -> dict[str, Any]:
     litellm_params: dict[str, Any] = {
         "model": spec.route_model,
-        "litellm_credential_name": spec.credential_name,
     }
-    if spec.api_base:
+    if spec.credential_name:
+        litellm_params["litellm_credential_name"] = spec.credential_name
+    if spec.api_base is not None:
         litellm_params["api_base"] = spec.api_base
+    if spec.custom_llm_provider:
+        litellm_params["custom_llm_provider"] = spec.custom_llm_provider
+    if spec.reasoning_effort:
+        litellm_params["reasoning_effort"] = spec.reasoning_effort
+    elif spec.clear_reasoning_effort:
+        litellm_params["reasoning_effort"] = ""
     return {
         "model_name": spec.alias,
         "litellm_params": litellm_params,
